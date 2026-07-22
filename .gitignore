@@ -5,3 +5,5 @@ tmp/
 .DS_Store
 Thumbs.db
 
+# 图像抠图过程中的纯色背景中间文件
+prototype/assets/stickers/*-key.png
