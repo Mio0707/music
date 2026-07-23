@@ -119,7 +119,7 @@ h2 { margin-bottom: 10px; font-size: clamp(27px, 5vw, 42px); line-height: 1.12; 
 .performer-rabbit { background-image: url("assets/stickers/performer-rabbit.png"); }
 .performer-dog { background-image: url("assets/stickers/performer-dog.png"); }
 .performer-cat { background-image: url("assets/stickers/performer-cat.png"); }
-.performer-lion { background-image: url("assets/stickers/performer-lion.png"); }
+.performer-lion { background-image: url("assets/stickers/performer-lion-trumpet.png"); }
 .performer-bear { background-image: url("assets/stickers/performer-bear-cropped.png"); }
 
 .actions { width: min(100%, 520px); display: grid; gap: 12px; }
@@ -236,6 +236,72 @@ h2 { margin-bottom: 10px; font-size: clamp(27px, 5vw, 42px); line-height: 1.12; 
 .promise-list { display: grid; gap: 9px; text-align: left; width: min(100%, 520px); margin: 8px auto 0; }
 .promise-list div { padding: 12px 14px; border-radius: 15px; background: #eef9f5; font-weight: 700; }
 
+.classroom-screen { justify-content: flex-start; }
+.lesson-shell {
+  width: min(100%, 780px);
+  display: grid;
+  gap: 18px;
+  padding: clamp(20px, 4vw, 34px);
+  border: 2px solid rgba(255,255,255,0.75);
+  border-radius: 32px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.lesson-summary { display: flex; align-items: center; gap: 18px; }
+.lesson-summary h3 { margin: 5px 0; font-size: 25px; }
+.lesson-summary p { margin: 0; color: var(--muted); font-weight: 700; }
+.song-cover {
+  width: 86px;
+  aspect-ratio: 1;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 24px;
+  color: #6a4a13;
+  background: linear-gradient(145deg, #ffe891, #ffbd74);
+  font-size: 46px;
+  box-shadow: 0 8px 0 #e69a55;
+}
+.lesson-tag {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 999px;
+  color: #49655b;
+  background: #e6f6ef;
+  font-size: 12px;
+  font-weight: 900;
+}
+.ai-result-title { display: flex; align-items: center; justify-content: space-between; gap: 12px; font-weight: 900; }
+.ai-result-title span::before { content: "✨ "; }
+.ai-result-title small { color: var(--muted); }
+.melody-card {
+  position: relative;
+  padding: 16px 18px 12px 42px;
+  border-radius: 24px;
+  color: #6650a5;
+  background: linear-gradient(180deg, #f4f0ff, #fff);
+  overflow: hidden;
+}
+.melody-card::before {
+  content: "";
+  position: absolute;
+  inset: 18px 18px 36px 42px;
+  background: repeating-linear-gradient(180deg, transparent 0 31px, rgba(102,80,165,.09) 31px 33px);
+}
+.melody-labels { position: absolute; z-index: 2; left: 13px; top: 24px; bottom: 42px; display: flex; flex-direction: column; justify-content: space-between; color: var(--muted); font-size: 12px; font-weight: 900; }
+.melody-svg { position: relative; z-index: 1; display: block; width: 100%; height: auto; }
+.melody-svg circle { fill: #fff; stroke: currentColor; stroke-width: 8; }
+.melody-caption { position: relative; z-index: 1; text-align: center; color: #635c78; font-weight: 900; }
+.section-heading { margin: 0; text-align: center; }
+.body-pattern { width: min(100%, 620px); margin: 0 auto; display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+.body-pattern div { min-height: 118px; display: grid; place-items: center; align-content: center; gap: 2px; padding: 10px; border: 2px solid rgba(41,48,66,.09); border-radius: 20px; background: #fff8df; }
+.body-pattern strong { width: 26px; height: 26px; display: grid; place-items: center; border-radius: 9px; color: white; background: var(--ink); font-size: 13px; }
+.body-pattern span { font-size: 35px; }
+.body-pattern small { color: var(--muted); font-weight: 900; }
+.teacher-notes { padding: 15px 18px; border-left: 6px solid var(--mint); border-radius: 14px; background: #edf9f5; }
+.teacher-notes p { margin: 5px 0 0; color: #53635d; line-height: 1.65; font-weight: 700; }
+.lesson-live { border-color: rgba(255,119,95,.3); box-shadow: 0 20px 65px rgba(117,75,57,.18); }
+
 .postcard {
   width: min(100%, 720px);
   padding: clamp(22px, 5vw, 45px);
@@ -319,6 +385,9 @@ h2 { margin-bottom: 10px; font-size: clamp(27px, 5vw, 42px); line-height: 1.12; 
   .stage-dog { left: 33%; width: 38%; }
   .stage-cat { left: 57%; }
   .stage-lion { right: -3%; }
+  .lesson-summary { align-items: flex-start; }
+  .song-cover { width: 68px; border-radius: 18px; font-size: 35px; }
+  .body-pattern { grid-template-columns: repeat(2, 1fr); }
 }
 
 @media (max-width: 430px) {

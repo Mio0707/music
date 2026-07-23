@@ -4,10 +4,10 @@ const CREATION_BEATS = 4;
 
 const animals = {
   dog: { emoji: "🐶", name: "小狗", role: "鼓" },
-  rabbit: { emoji: "🐰", name: "小兔", role: "唱歌" },
+  rabbit: { emoji: "🐰", name: "小兔", role: "唱名" },
   bear: { emoji: "🐻", name: "小熊", role: "键盘" },
   cat: { emoji: "🐱", name: "小猫", role: "贝斯" },
-  lion: { emoji: "🦁", name: "小狮子", role: "吉他" }
+  lion: { emoji: "🦁", name: "小狮子", role: "小号" }
 };
 
 const moods = {
@@ -29,7 +29,7 @@ const state = {
   screen: "home",
   mood: null,
   warmPattern: [0, 1, 2, 3],
-  recordHits: [],
+  recordHits: [0, 2],
   isRecording: false,
   selectedAnimal: null,
   sections: [
@@ -147,6 +147,8 @@ function performerMarkup(key, extraClass = "") {
 function render() {
   const views = {
     home: renderHome,
+    classroom: renderClassroom,
+    classroomLesson: renderClassroomLesson,
     mood: renderMood,
     warmup: renderWarmup,
     record: renderRecord,
@@ -171,10 +173,60 @@ function renderHome() {
       ${band()}
       <div class="actions"><button class="button primary" data-go="mood">开始创作</button></div>
       <div class="home-links">
-        <button class="small-card" data-action="classroom"><span>🥁</span>动物音乐课堂</button>
+        <button class="small-card" data-go="classroom"><span>🥁</span>教师音乐课堂</button>
         <button class="small-card" data-action="library"><span>💌</span>我的音乐明信片</button>
       </div>
     </section>`;
+}
+
+function melodyContour() {
+  return `<div class="melody-card" aria-label="旋律高低线条">
+    <div class="melody-labels"><span>高</span><span>低</span></div>
+    <svg class="melody-svg" viewBox="0 0 640 180" role="img" aria-label="旋律先保持平稳，再逐渐升高，最后回到中间">
+      <polyline points="40,132 120,132 200,96 280,96 360,54 440,54 520,96 600,96" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></polyline>
+      ${[[40,132],[120,132],[200,96],[280,96],[360,54],[440,54],[520,96],[600,96]].map(([x,y], index) => `<circle cx="${x}" cy="${y}" r="15"><title>第 ${index + 1} 个声音</title></circle>`).join("")}
+    </svg>
+    <div class="melody-caption">平稳 → 向上走 → 回到中间</div>
+  </div>`;
+}
+
+function bodyPattern() {
+  return `<div class="body-pattern" aria-label="身体演奏动作">
+    <div><strong>1</strong><span>👏</span><small>拍手</small></div>
+    <div><strong>2</strong><span>🤲</span><small>拍腿</small></div>
+    <div><strong>3</strong><span>👏</span><small>拍手</small></div>
+    <div><strong>4</strong><span>✨</span><small>停住</small></div>
+  </div>`;
+}
+
+function renderClassroom() {
+  return `${topbar("教师模式")}<section class="screen classroom-screen">
+    <div class="hero"><p class="eyebrow">AI 音乐课堂</p><h2>把一首歌，变成全班都能参与的音乐活动</h2><p class="lead">首版使用经过审核的内置歌曲，保证课堂内容稳定、清楚、适龄。</p></div>
+    <div class="lesson-shell">
+      <div class="lesson-summary">
+        <div class="song-cover">♪</div>
+        <div><span class="lesson-tag">内置示范歌曲</span><h3>《小星星》</h3><p>6–8 岁 · 约 8 分钟 · 学习旋律高低与稳定拍</p></div>
+      </div>
+      <div class="ai-result-title"><span>AI 已完成分析</span><small>教师审核版</small></div>
+      ${melodyContour()}
+      <h3 class="section-heading">全班身体演奏</h3>
+      ${bodyPattern()}
+      <div class="teacher-notes"><strong>教师引导语</strong><p>“用手指跟着线条走一走。声音变高时，手也慢慢举高。”</p></div>
+    </div>
+    <div class="button-row"><button class="button secondary" data-action="play-class-song">▶ 听旋律片段</button><button class="button primary" data-go="classroomLesson">进入投屏课堂 →</button></div>
+  </section>`;
+}
+
+function renderClassroomLesson() {
+  return `${topbar("投屏课堂")}<section class="screen">
+    <div class="hero"><p class="eyebrow">先看见，再用身体感受</p><h2>跟着旋律线，一起完成 4 拍</h2><p class="lead">屏幕负责提示什么时候开始、什么时候停；老师负责观察孩子并调整节奏。</p></div>
+    <div class="lesson-shell lesson-live">
+      ${melodyContour()}
+      ${bodyPattern()}
+      <div class="teacher-notes"><strong>这一轮只学一个特点</strong><p>听见旋律向上时举高手，最后一拍一起停住。</p></div>
+    </div>
+    <div class="button-row"><button class="button secondary" data-action="play-class-song">▶ 示范一次</button><button class="button primary" data-go="mood">现在轮到孩子创作 →</button></div>
+  </section>`;
 }
 
 function renderMood() {
@@ -182,10 +234,10 @@ function renderMood() {
     <button class="mood-card ${mood.className} ${state.mood === key ? "selected" : ""}" data-mood="${key}" aria-pressed="${state.mood === key}">
       <span class="emoji">${mood.emoji}</span><strong>${mood.name}</strong><small>${mood.hint}</small>
     </button>`).join("");
-  return `${topbar("第 1 步 / 5")}<section class="screen">
+  return `${topbar("创作第 1 步 / 3")}<section class="screen">
     <div class="hero"><p class="eyebrow">选择音乐的起点</p><h2>今天想从哪一种感觉开始？</h2><p class="lead">它只是一个开始，你可以把音乐改成任何样子。</p></div>
     <div class="mood-grid">${cards}</div>
-    <div class="actions"><button class="button primary" data-go="warmup" ${state.mood ? "" : "disabled"}>用这张贴纸开始</button></div>
+    <div class="actions"><button class="button primary" data-go="arrange" ${state.mood ? "" : "disabled"}>用这张贴纸开始</button></div>
   </section>`;
 }
 
@@ -237,12 +289,12 @@ function renderArrange() {
     </article>`;
   }).join("");
   const stickers = Object.entries(animals).map(([key, animal]) => `<button class="sticker ${state.selectedAnimal === key ? "selected" : ""}" draggable="true" data-sticker="${key}" aria-pressed="${state.selectedAnimal === key}">${avatarMarkup(key)}<span>${animal.name} · ${animal.role}</span></button>`).join("");
-  return `${topbar("第 4 步 / 5")}<section class="screen arrange-screen">
+  return `${topbar("创作第 2 步 / 3")}<section class="screen arrange-screen">
     <div class="hero"><p class="eyebrow">叫上动物乐队</p><h2>谁在哪一段演奏？</h2><p class="lead">拖动贴纸，或先点动物、再点乐段。点时间轴里的动物可以让它休息。</p></div>
     ${renderStage()}
     <div class="timeline">${sections}</div>
     <div class="sticker-tray" data-tray><h3>动物贴纸盒</h3><div class="stickers">${stickers}</div></div>
-    <div class="button-row"><button class="button secondary" data-action="play-all">▶ 从头听</button><button class="button primary" data-action="begin-refine">完成我的音乐 →</button></div>
+    <div class="button-row"><button class="button secondary" data-action="play-all">▶ 听我的作品</button><button class="button primary" data-action="begin-refine">看看它能怎么玩 →</button></div>
   </section>`;
 }
 
@@ -250,26 +302,33 @@ function renderProcessing() {
   return `${topbar("正在完成")}<section class="screen">
     <div class="stage-card">
       ${band("playing")}
-      <p class="eyebrow">AI 正在帮忙伴奏</p>
-      <h2>正在连接四个乐段…</h2>
-      <p class="lead">保留你的拍手，也不会改变动物出场。</p>
+      <p class="eyebrow">正在整理你的四段编排</p>
+      <h2>实时混音已经完成，正在优化衔接…</h2>
+      <p class="lead">不会重新作曲，也不会改变动物出场。</p>
     </div>
   </section>`;
 }
 
 function renderRefine() {
-  return `${topbar("第 5 步 / 5")}<section class="screen">
-    <div class="hero"><p class="eyebrow">作品已经准备好</p><h2>听听两个版本</h2><p class="lead">AI 只帮忙连接段落，你决定的动物出场不会改变。</p></div>
-    <div class="stage-card">
-      ${band("playing")}
+  return `${topbar("创作第 3 步 / 3")}<section class="screen">
+    <div class="hero"><p class="eyebrow">作品已经准备好</p><h2>先听作品，再一起演出来</h2><p class="lead">AI只优化音量、衔接和结尾，不重新作曲，也不替你改变动物出场。</p></div>
+    <div class="lesson-shell">
       <div class="version-toggle">
-        <button class="${state.version === "original" ? "active" : ""}" data-version="original">我的编排</button>
-        <button class="${state.version === "ai" ? "active" : ""}" data-version="ai">✨ AI 帮我润色</button>
+        <button class="${state.version === "original" ? "active" : ""}" data-version="original">我的实时混音</button>
+        <button class="${state.version === "ai" ? "active" : ""}" data-version="ai">✨ AI轻量优化</button>
       </div>
-      <div class="promise-list"><div>✓ 保留了你的拍手</div><div>✓ 没有改变动物出场</div><div>✓ ${state.version === "ai" ? "补上了柔和的开头和结尾" : "这是你刚刚完成的原始版本"}</div></div>
-      <div class="button-row" style="margin-top:18px"><button class="button secondary" data-action="preview-version">▶ 听这个版本</button><button class="button ghost" data-go="arrange">回去改一改</button></div>
+      <div class="promise-list">
+        <div>✓ 保留动物出场时间</div>
+        <div>✓ 不增加没有选择的乐器</div>
+        <div>✓ ${state.version === "ai" ? "只优化音量、衔接和结尾" : "这是系统按四段编排完成的原始混音"}</div>
+      </div>
+      <div class="button-row"><button class="button secondary" data-action="preview-version">▶ 听这个版本</button><button class="button ghost" data-go="arrange">回去改一改</button></div>
+      <h3 class="section-heading">把我的作品变成课堂玩法</h3>
+      ${melodyContour()}
+      <h3 class="section-heading">AI生成的身体演奏</h3>
+      ${bodyPattern()}
     </div>
-    <div class="actions"><button class="button primary" data-go="postcard">选这个做明信片</button></div>
+    <div class="button-row"><button class="button primary" data-go="perform">一起演我的音乐 →</button><button class="button secondary" data-go="postcard">做成音乐明信片</button></div>
   </section>`;
 }
 
@@ -284,7 +343,7 @@ function renderPostcard() {
       ${band(state.playingSection !== null ? "playing" : "")}
       <div class="postcard-message">“${state.message}”</div>
       <button class="button secondary" data-action="play-all">▶ 播放我的音乐</button>
-      <p class="authorship">由我创作 · AI 帮忙伴奏</p>
+      <p class="authorship">由我选择与编排 · AI 提供音乐素材和混音帮助</p>
     </div>
     <div class="stage-card">
       <h3>给作品选个名字</h3><div class="choice-chips">${titles.map(title => `<button class="choice-chip ${state.title === title ? "selected" : ""}" data-title="${title}">${title}</button>`).join("")}</div>
@@ -296,9 +355,10 @@ function renderPostcard() {
 
 function renderPerform() {
   return `${topbar("一起演")}<section class="screen">
-    <div class="hero"><p class="eyebrow">这里不会拍摄你</p><h2>跟着动物一起动起来</h2><p class="lead">小狗拍手、小兔哼唱、小熊弹键盘、小猫摇摆、小狮子弹吉他。没有评分，尽情表演吧！</p></div>
+    <div class="hero"><p class="eyebrow">这里不会拍摄你</p><h2>跟着动物一起动起来</h2><p class="lead">小狗拍手、小兔唱 do re mi、小熊弹键盘、小猫摇摆、小狮子先吸气、再吹小号。没有评分，尽情表演吧！</p></div>
     ${band(state.playingSection !== null ? "playing" : "")}
-    <div class="actions"><button class="button primary" data-action="play-performance">▶ 开始一起演</button><button class="button secondary" data-go="postcard">回到明信片</button></div>
+    ${bodyPattern()}
+    <div class="actions"><button class="button primary" data-action="play-performance">▶ 开始一起演</button><button class="button secondary" data-go="classroom">回到教师课堂</button></div>
   </section>`;
 }
 
@@ -355,8 +415,8 @@ function selectMood(key) {
 function handleAction(action, button, event) {
   const actions = {
     back: goBack,
-    classroom: () => showToast("节奏课堂会在核心流程完成后接入"),
     library: () => showToast(state.saved ? "已经保存 1 张音乐明信片" : "完成作品后，明信片会出现在这里"),
+    "play-class-song": playClassSong,
     "play-warm": playWarmup,
     "new-pattern": newWarmPattern,
     clap: () => registerClap(true),
@@ -376,10 +436,22 @@ function handleAction(action, button, event) {
 }
 
 function goBack() {
-  const order = ["home", "mood", "warmup", "record", "arrange", "refine", "postcard"];
-  if (state.screen === "perform") return setScreen("postcard");
+  if (state.screen === "classroom") return setScreen("home");
+  if (state.screen === "classroomLesson") return setScreen("classroom");
+  if (state.screen === "perform") return setScreen("refine");
+  const order = ["home", "mood", "arrange", "refine", "postcard"];
   const index = order.indexOf(state.screen);
   setScreen(order[Math.max(0, index - 1)]);
+}
+
+function playClassSong() {
+  clearTimers();
+  const notes = [261.6, 261.6, 392, 392, 440, 440, 392, 349.2];
+  notes.forEach((note, index) => later(() => {
+    tone(note, 0.36, 0.08, "triangle");
+    if (index % 2 === 0) drum(0.35);
+  }, index * 430));
+  later(() => showToast("旋律向上走时举高手，最后一拍停住"), notes.length * 430);
 }
 
 function playWarmup() {
@@ -593,15 +665,18 @@ function playSection(sectionIndex, embellished = false, onDone) {
     later(() => {
       if (section.includes("dog") && state.recordHits.includes(beat % CREATION_BEATS)) drum(beat % 4 === 0 ? 0.9 : 0.6);
       if (section.includes("cat") && beat % 2 === 0) tone(mood.notes[sectionIndex] / 2, 0.28, 0.08, "sine");
-      if (section.includes("lion") && beat % 4 === 0) {
-        tone(mood.notes[sectionIndex], 0.45, 0.055, "triangle");
-        tone(mood.notes[(sectionIndex + 2) % 4], 0.45, 0.045, "triangle");
+      if (section.includes("lion") && (beat % 4 === 0 || beat % 4 === 3)) {
+        const trumpetDuration = beat % 4 === 0 ? 0.48 : 0.18;
+        tone(mood.notes[(sectionIndex + 2) % 4] * 2, trumpetDuration, 0.035, "sawtooth");
       }
-      if (section.includes("bear") && beat % 2 === 0) {
+      if (section.includes("bear") && section.includes("rabbit") && beat % 4 === 0) {
+        tone(mood.notes[sectionIndex], 0.48, 0.04, "triangle");
+        tone(mood.notes[(sectionIndex + 2) % 4], 0.48, 0.025, "triangle");
+      } else if (section.includes("bear") && beat % 2 === 0) {
         const melodyNote = mood.notes[(beat / 2 + sectionIndex) % 4 | 0];
-        tone(melodyNote, 0.24, section.includes("rabbit") ? 0.045 : 0.07, "square");
+        tone(melodyNote, 0.24, 0.07, "square");
       }
-      const rabbitBeat = section.includes("bear") ? beat % 4 === 3 : beat % 2 === 1;
+      const rabbitBeat = beat % 2 === 1;
       if (section.includes("rabbit") && rabbitBeat) tone(mood.notes[(beat / 2 + sectionIndex) % 4 | 0] * 2, section.includes("bear") ? 0.36 : 0.18, 0.065, embellished ? "sine" : "triangle");
       if (embellished && beat === 7) tone(mood.notes[(sectionIndex + 1) % 4] * 2, 0.35, 0.05, "sine");
     }, beat * interval);
