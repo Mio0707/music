@@ -11,11 +11,21 @@ const animals = {
 };
 
 const moods = {
-  happy: { name: "开心", emoji: "☀️", hint: "像阳光跳进窗户", className: "mood-happy", bpm: 96, notes: [261.6, 329.6, 392, 523.3] },
-  calm: { name: "安静", emoji: "🌙", hint: "留一点呼吸和空白", className: "mood-calm", bpm: 76, notes: [220, 261.6, 329.6, 392] },
-  brave: { name: "勇敢", emoji: "🔥", hint: "让每一下都站得稳", className: "mood-brave", bpm: 88, notes: [196, 246.9, 293.7, 392] },
-  miss: { name: "想念", emoji: "⭐", hint: "把远方放进旋律里", className: "mood-miss", bpm: 72, notes: [220, 293.7, 329.6, 440] }
+  happy: { name: "开心", emoji: "☀️", hint: "像阳光跳进窗户", postcardLine: "我的音乐像阳光跳进窗户。", className: "mood-happy", bpm: 96, notes: [261.6, 329.6, 392, 523.3] },
+  calm: { name: "安静", emoji: "🌙", hint: "留一点呼吸和空白", postcardLine: "我的音乐想慢慢走一会儿。", className: "mood-calm", bpm: 76, notes: [220, 261.6, 329.6, 392] },
+  brave: { name: "勇敢", emoji: "🔥", hint: "让每一下都站得稳", postcardLine: "我的音乐准备好向前走啦！", className: "mood-brave", bpm: 88, notes: [196, 246.9, 293.7, 392] },
+  miss: { name: "想念", emoji: "⭐", hint: "把远方放进旋律里", postcardLine: "我的音乐想飞去远方看一看。", className: "mood-miss", bpm: 72, notes: [220, 293.7, 329.6, 440] }
 };
+
+function escapeHtml(value) {
+  return String(value).replace(/[&<>"']/g, character => ({
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;"
+  })[character]);
+}
 
 function hasSavedPostcard() {
   try {
@@ -335,19 +345,27 @@ function renderRefine() {
 function renderPostcard() {
   const mood = moods[state.mood] || moods.miss;
   const titles = ["写给远方的星星", `${mood.name}的小乐队`, "五个朋友的歌"];
-  const messages = ["想把今天做的音乐送给你。", "你听见小狗的鼓点了吗？", "这是我和动物朋友一起完成的！"];
+  const messages = [mood.postcardLine, "我最喜欢大家一起演奏的那一段。", "我想把这首音乐送给你。"];
+  const safeTitle = escapeHtml(state.title);
+  const safeMessage = escapeHtml(state.message);
   return `${topbar("作品完成")}<section class="screen">
     <div class="postcard">
       <div class="eyebrow">${mood.emoji} ${mood.name}音乐明信片</div>
-      <h2>${state.title}</h2>
+      <h2>${safeTitle}</h2>
       ${band(state.playingSection !== null ? "playing" : "")}
-      <div class="postcard-message">“${state.message}”</div>
+      <div class="postcard-message">“${safeMessage}”</div>
       <button class="button secondary" data-action="play-all">▶ 播放我的音乐</button>
       <p class="authorship">由我选择与编排 · AI 提供音乐素材和混音帮助</p>
     </div>
     <div class="stage-card">
       <h3>给作品选个名字</h3><div class="choice-chips">${titles.map(title => `<button class="choice-chip ${state.title === title ? "selected" : ""}" data-title="${title}">${title}</button>`).join("")}</div>
-      <h3 style="margin-top:20px">想说的一句话</h3><div class="choice-chips">${messages.map(message => `<button class="choice-chip ${state.message === message ? "selected" : ""}" data-message="${message}">${message}</button>`).join("")}</div>
+      <div class="expression-prompt">
+        ${avatarMarkup("rabbit", "expression-rabbit")}
+        <div><h3>如果音乐会说话，它想说什么？</h3><p>选一句，或者自己说。老师和家长可以帮忙记下来。</p></div>
+      </div>
+      <div class="choice-chips">${messages.map(message => `<button class="choice-chip ${state.message === message ? "selected" : ""}" data-message="${message}">${message}</button>`).join("")}</div>
+      <label class="message-label" for="postcard-message-input">我想自己说</label>
+      <input id="postcard-message-input" class="message-input" data-message-input maxlength="50" value="${safeMessage}" placeholder="说一个词或一句话都可以">
     </div>
     <div class="button-row"><button class="button primary" data-action="save">${state.saved ? "✓ 已保存到我的明信片" : "保存到我的明信片"}</button><button class="button secondary" data-go="perform">一起演</button><button class="button secondary" data-action="share">分享给家人朋友</button></div>
   </section>${renderModal()}`;
@@ -402,11 +420,18 @@ function bindEvents() {
   app.querySelectorAll("[data-version]").forEach(button => button.addEventListener("click", () => { state.version = button.dataset.version; render(); }));
   app.querySelectorAll("[data-title]").forEach(button => button.addEventListener("click", () => { state.title = button.dataset.title; render(); }));
   app.querySelectorAll("[data-message]").forEach(button => button.addEventListener("click", () => { state.message = button.dataset.message; render(); }));
+  const messageInput = app.querySelector("[data-message-input]");
+  messageInput?.addEventListener("input", () => {
+    state.message = messageInput.value;
+    const postcardMessage = app.querySelector(".postcard-message");
+    if (postcardMessage) postcardMessage.textContent = `“${state.message || "说一个词也可以"}”`;
+  });
   bindArrangement();
 }
 
 function selectMood(key) {
   state.mood = key;
+  state.message = moods[key].postcardLine;
   const notes = moods[key].notes;
   notes.slice(0, 3).forEach((note, index) => later(() => tone(note, 0.25, 0.09, "triangle"), index * 130));
   render();
