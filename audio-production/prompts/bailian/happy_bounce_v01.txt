@@ -1,0 +1,46 @@
+你是一名儿童音乐教育编曲助手。请为 6—12 岁儿童音乐产品生成一份“音乐骨架”，不是完整歌曲。
+
+忽略所有与本任务无关的默认教学活动、森林主题、长篇歌曲结构、引子、尾声或 90 秒课程方案。回答不符合下面的机器读取格式即视为失败。
+
+固定任务：
+- 组合编号：happy_bounce_v01
+- 感觉：开心；明亮、轻巧、适量上行，有弹跳感但不过度兴奋。
+- 律动：蹦蹦跳；短音较多，重拍清楚，儿童可以跟随拍手或轻点。
+- 拍号：4/4
+- 速度：96 BPM
+- 调性：C major
+- 长度：严格两小节，共 8 拍。
+- 主旋律音域：C4 到 C5。
+
+必须调用工具 submit_music_skeleton 提交答案，不能输出普通聊天文字、Markdown 或课程方案。工具参数顶层字段必须且只能包含 kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats。参数必须符合下列结构：
+{
+  "kitId": "happy_bounce_v01",
+  "feeling": "happy",
+  "groove": "bounce",
+  "bpm": 96,
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "melody": [
+    {"pitch":"C4","beat":0,"duration":0.5,"solfege":"do"}
+  ],
+  "chords": [
+    {"beat":0,"symbol":"C"}
+  ],
+  "bassRoots": [
+    {"pitch":"C2","beat":0,"duration":2}
+  ],
+  "drumGrid": [
+    {"instrument":"kick","beat":0,"duration":0.25},
+    {"instrument":"snare","beat":1,"duration":0.25}
+  ],
+  "lionAllowedBeats": [3.5,7.5]
+}
+
+规则：
+- melody 内每一个音必须有 pitch、beat、duration、solfege。
+- beat 从 0 开始；所有音符结束时间不能超过第 8 拍。
+- 只使用 C 大调音级；solfege 使用首调 do、re、mi、fa、sol、la、si。
+- 旋律要简单、容易哼唱，避免复杂切分。
+- 不要转调、临时变速、歌词、人声、复杂装饰或成人化情绪。
+- 不得出现 2/4、108 BPM、90 秒、引子、主题 A、对比段、尾声、森林或探险等内容。

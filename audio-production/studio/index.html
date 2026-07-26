@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>动物音乐分轨台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div>
+        <p class="eyebrow">儿童音乐素材工具 · 本地版</p>
+        <h1>动物音乐分轨台</h1>
+        <p class="intro">放入音乐骨架 JSON，一键得到对齐分轨，再像调节小乐队一样控制每只动物的音量。</p>
+      </div>
+      <div class="local-badge"><span></span> 全程在本机处理</div>
+    </header>
+
+    <section class="panel upload-panel" aria-labelledby="upload-title">
+      <div class="section-heading">
+        <div class="step">1</div>
+        <div>
+          <h2 id="upload-title">放入音乐骨架</h2>
+          <p>第一版支持编号 <code>happy_bounce_v01</code></p>
+        </div>
+      </div>
+
+      <label class="drop-zone" id="drop-zone" for="json-file">
+        <input id="json-file" type="file" accept="application/json,.json">
+        <span class="upload-icon">↑</span>
+        <strong id="file-title">选择或拖入 JSON 文件</strong>
+        <span id="file-subtitle">文件只会发送给这台电脑上的本地处理程序</span>
+      </label>
+
+      <div class="upload-actions">
+        <button class="button secondary" id="example-button" type="button">载入当前示例</button>
+        <button class="button primary" id="process-button" type="button" disabled>生成动物分轨</button>
+      </div>
+      <div class="status" id="status" role="status" aria-live="polite">等待 JSON 文件</div>
+    </section>
+
+    <section class="panel library-panel" aria-labelledby="library-title">
+      <div class="section-heading library-heading">
+        <div class="step">2</div>
+        <div>
+          <h2 id="library-title">已处理音乐</h2>
+          <p>保存在这台电脑上的历史分轨，重新打开也不会消失</p>
+        </div>
+        <button class="button secondary compact" id="refresh-library" type="button">刷新</button>
+      </div>
+      <div class="library-list" id="library-list">
+        <div class="empty-library">正在读取本机作品……</div>
+      </div>
+    </section>
+
+    <section class="panel mixer-panel is-hidden" id="mixer-panel" aria-labelledby="mixer-title">
+      <div class="section-heading mixer-heading">
+        <div class="step">3</div>
+        <div>
+          <h2 id="mixer-title">调节动物小乐队</h2>
+          <p id="kit-summary">三条轨道会从同一拍同时开始</p>
+        </div>
+        <div class="transport">
+          <button class="round-button play" id="play-button" type="button" aria-label="播放">▶</button>
+          <button class="round-button" id="stop-button" type="button" aria-label="停止">■</button>
+          <span id="transport-label">准备播放</span>
+        </div>
+      </div>
+
+      <div class="tracks" id="tracks"></div>
+
+      <div class="pending-box">
+        <strong>后续补齐</strong>
+        <span>🦁 小狮子：需要确认萨克斯短句</span>
+        <span>🐰 小兔：需要制作 do / re / mi 唱名人声</span>
+      </div>
+
+      <div class="export-row">
+        <p>音量调整只改变混音，不会改写原始 MIDI。</p>
+        <button class="button primary" id="export-button" type="button">导出当前混音</button>
+      </div>
+      <div class="download-box is-hidden" id="download-box">
+        <span>混音已生成</span>
+        <a class="button secondary" id="download-link" download>下载 WAV</a>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "kitId": "happy_bounce_v01",
+  "feeling": "开心",
+  "groove": "蹦蹦跳",
+  "bpm": 96,
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "totalBeats": 8,
+  "targetAge": "6-12",
+  "melodyRange": ["C4", "C5"],
+  "model": "qwen3.7-plus",
+  "forbidden": [
+    "转调",
+    "临时变速",
+    "复杂切分",
+    "成人化情绪",
+    "歌词",
+    "人声"
+  ]
+}
