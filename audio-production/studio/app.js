@@ -14,6 +14,11 @@ const themeJsonWrap = document.querySelector("#theme-json-wrap");
 const themeJsonEditor = document.querySelector("#theme-json-editor");
 const generateThemeButton = document.querySelector("#generate-theme-button");
 const lockThemeButton = document.querySelector("#lock-theme-button");
+const themePreviewButton = document.querySelector("#theme-preview-button");
+const themePreviewBox = document.querySelector("#theme-preview-box");
+const themePreviewAudio = document.querySelector("#theme-preview-audio");
+const themeRevisionFeedback = document.querySelector("#theme-revision-feedback");
+const reviseThemeButton = document.querySelector("#revise-theme-button");
 const themeStatus = document.querySelector("#theme-status");
 const grooveGrid = document.querySelector("#groove-grid");
 const familyBadge = document.querySelector("#family-badge");
@@ -34,6 +39,9 @@ const previewButton = document.querySelector("#preview-button");
 const previewBox = document.querySelector("#preview-box");
 const previewAudio = document.querySelector("#preview-audio");
 const approvePreviewButton = document.querySelector("#approve-preview-button");
+const revisionBox = document.querySelector("#revision-box");
+const revisionFeedback = document.querySelector("#revision-feedback");
+const reviseJsonButton = document.querySelector("#revise-json-button");
 const generateStemsButton = document.querySelector("#generate-stems-button");
 const workflowStatus = document.querySelector("#workflow-status");
 
@@ -89,7 +97,8 @@ function formatDate(value) {
 
 async function request(path, payload) {
   const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
-  const data = await response.json();
+  const isJson = (response.headers.get("content-type") || "").includes("application/json");
+  const data = isJson ? await response.json() : { error: "平台后台没有识别这个请求。请在 PowerShell 中停止并重新启动平台后再试。" };
   if (!response.ok) throw new Error(data.error || "处理失败");
   return data;
 }
@@ -161,6 +170,13 @@ function renderThemeWorkspace() {
   setStatus(themeStatus, theme.status === "locked" ? "这份心情母版已进入知识库，四个律动版本将强制继承它。" : theme.status === "draft" ? "已有一份AI草案，请检查JSON后锁定。" : "审核提示词后，让AI生成这份心情的共同音乐身份。", theme.status === "locked" ? "success" : "");
 }
 
+function resetThemePreview() {
+  themePreviewAudio.pause();
+  themePreviewAudio.removeAttribute("src");
+  themePreviewAudio.load();
+  themePreviewBox.classList.add("is-hidden");
+}
+
 function renderGrooves() {
   const theme = currentTheme();
   const ready = theme.status === "locked";
@@ -187,6 +203,10 @@ function resetWorkflow() {
   previewBox.classList.add("is-hidden");
   previewAudio.pause();
   previewAudio.removeAttribute("src");
+  revisionBox.classList.add("is-hidden");
+  revisionFeedback.value = "";
+  reviseJsonButton.disabled = false;
+  reviseJsonButton.textContent = "按意见重新生成";
   generateJsonButton.disabled = true;
   previewButton.disabled = true;
   generateStemsButton.disabled = true;
@@ -255,6 +275,7 @@ generateThemeButton.addEventListener("click", async () => {
     themeDraft = data.theme;
     themeJsonEditor.value = JSON.stringify(themeDraft, null, 2);
     themeJsonWrap.classList.remove("is-hidden");
+    resetThemePreview();
     lockThemeButton.disabled = false;
     setStatus(themeStatus, "主题JSON已生成。请检查后锁定，锁定后才开放四个律动改编。", "success");
   } catch (error) {
@@ -326,6 +347,7 @@ previewButton.addEventListener("click", async () => {
     productionRecord = await request("/api/records/preview", { recordId: productionRecord.recordId });
     previewAudio.src = productionRecord.previewUrl;
     previewBox.classList.remove("is-hidden");
+    revisionBox.classList.remove("is-hidden");
     setStatus(workflowStatus, "试听已生成。确认它既像这个心情，也有选定的律动感。", "success");
     await loadRecords();
   } catch (error) {
@@ -333,6 +355,79 @@ previewButton.addEventListener("click", async () => {
   } finally {
     previewButton.disabled = false;
     previewButton.textContent = "重新生成试听";
+  }
+});
+
+themePreviewButton.addEventListener("click", async () => {
+  themePreviewButton.disabled = true;
+  themePreviewButton.textContent = "渲染中…";
+  try {
+    const theme = JSON.parse(themeJsonEditor.value);
+    const data = await request("/api/themes/preview", { emotionId: selectedEmotionId, theme });
+    themePreviewAudio.src = data.previewUrl;
+    themePreviewBox.classList.remove("is-hidden");
+    setStatus(themeStatus, "母版试听已生成。请重点听旋律轮廓、和声色彩和整体情绪。", "success");
+  } catch (error) {
+    setStatus(themeStatus, error instanceof SyntaxError ? "主题 JSON 格式不完整，请检查括号和逗号。" : error.message, "error");
+  } finally {
+    themePreviewButton.disabled = false;
+    themePreviewButton.textContent = "重新生成母版试听";
+  }
+});
+
+reviseThemeButton.addEventListener("click", async () => {
+  const feedback = themeRevisionFeedback.value.trim();
+  if (feedback.length < 4) {
+    setStatus(themeStatus, "请先写下具体修改意见，例如“整体更明亮活泼，和声更有阳光感”。", "error");
+    themeRevisionFeedback.focus();
+    return;
+  }
+  reviseThemeButton.disabled = true;
+  reviseThemeButton.textContent = "正在按意见修改…";
+  try {
+    const theme = JSON.parse(themeJsonEditor.value);
+    const data = await request("/api/themes/revise", { emotionId: selectedEmotionId, theme, prompt: themePromptEditor.value, feedback });
+    themeDraft = data.theme;
+    themeJsonEditor.value = JSON.stringify(themeDraft, null, 2);
+    themeRevisionFeedback.value = "";
+    resetThemePreview();
+    setStatus(themeStatus, "主题母版已按意见更新。请重新试听，满意后再锁定。", "success");
+  } catch (error) {
+    setStatus(themeStatus, error instanceof SyntaxError ? "主题 JSON 格式不完整，请检查括号和逗号。" : error.message, "error");
+  } finally {
+    reviseThemeButton.disabled = false;
+    reviseThemeButton.textContent = "按意见修改母版";
+  }
+});
+
+reviseJsonButton.addEventListener("click", async () => {
+  if (!productionRecord) return;
+  const feedback = revisionFeedback.value.trim();
+  if (feedback.length < 4) {
+    setStatus(workflowStatus, "请先写下具体的修改意见，例如“整体更明亮，键盘提高音区”。", "error");
+    revisionFeedback.focus();
+    return;
+  }
+  reviseJsonButton.disabled = true;
+  reviseJsonButton.textContent = "正在按意见修改…";
+  try {
+    productionRecord = await request("/api/records/revise", { recordId: productionRecord.recordId, feedback });
+    jsonPreview.textContent = JSON.stringify(productionRecord.skeleton, null, 2);
+    jsonPreview.classList.remove("is-hidden");
+    previewAudio.pause();
+    previewAudio.removeAttribute("src");
+    previewAudio.load();
+    previewBox.classList.add("is-hidden");
+    revisionBox.classList.add("is-hidden");
+    revisionFeedback.value = "";
+    previewButton.disabled = false;
+    setStatus(workflowStatus, "已按修改意见生成新的 JSON，并通过音乐规则检查。请重新生成试听。", "success");
+    await loadRecords();
+  } catch (error) {
+    setStatus(workflowStatus, error.message, "error");
+  } finally {
+    reviseJsonButton.disabled = false;
+    reviseJsonButton.textContent = "按意见重新生成";
   }
 });
 

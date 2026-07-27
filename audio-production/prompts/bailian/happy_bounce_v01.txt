@@ -34,20 +34,24 @@
     {"instrument":"kick","beat":0,"duration":0.25},
     {"instrument":"snare","beat":1,"duration":0.25}
   ],
-  "lionAllowedBeats": [3.5,7.5],
+  "lionAllowedBeats": [2.5,3,3.5,6,6.5,7],
   "lionNotes": [
-    {"pitch":"G5","beat":3.5,"duration":0.25,"velocity":68},
-    {"pitch":"C5","beat":7.5,"duration":0.4,"velocity":60}
+    {"pitch":"E5","beat":2.5,"duration":0.5,"velocity":88},
+    {"pitch":"G5","beat":3,"duration":0.5,"velocity":92},
+    {"pitch":"E5","beat":3.5,"duration":0.5,"velocity":86},
+    {"pitch":"C5","beat":6,"duration":0.5,"velocity":88}
   ]
 }
 
 规则：
 - melody 内每一个音必须有 pitch、beat、duration、solfege。
-- beat 从 0 开始；所有音符结束时间不能超过第 8 拍。
+- beat 从 0 开始；所有音符结束时间不能超过第 8 拍。melody 必须从第 0 拍开始，最后一个旋律音必须在第 8 拍结束，完整占满两小节。
 - 只使用 C 大调音级；solfege 使用首调 do、re、mi、fa、sol、la、si。
 - 旋律要简单、容易哼唱，避免复杂切分。
+- 这是纯编曲，不依赖视觉角色。四件乐器用错位的音区、强弱与留白形成短暂突出：小熊键盘领奏核心动机；小猫贝斯在旋律停顿处安排一次有方向的短句；小狗鼓组在乐句交接处安排一次短鼓花；小狮子萨克斯在主旋律空隙演奏一句回应。不要让所有乐器持续叠在同一拍。
+- 蹦蹦跳不是只提高速度：旋律必须采用短八分音符、重复音和休止，每小节至少留出一个八分音符空隙；贝斯用半拍或一拍短根音贴着底鼓；键盘使用短促断奏和弦；萨克斯只在弹跳后的空隙进入。不要写摇一摇的长短摆动、稳稳走的长音铺底或向前冲的连续推进。
 - lionNotes 是小狮子的中音萨克斯短句，必须直接写出每个音的 pitch、beat、duration、velocity，不能只给文字描述或让程序自行补写。
-- 每个 lionNotes 的 beat 必须来自 lionAllowedBeats；只写 1—4 个短音，每个音最长 0.5 拍，不能遮住主旋律或形成持续独奏。
+- 每个 lionNotes 的 beat 必须来自 lionAllowedBeats；写 4—6 个音组成一句回应，每个音最长 0.75 拍，力度范围 55—100；要避开核心主旋律持续重叠。
 - 萨克斯短句应回应当前组合的开心和蹦蹦跳律动：明亮、短促、带弹跳感，可使用上行或回声式回应；只使用 C 大调音级，音域限制在 C4 到 G5。
 - 不要转调、临时变速、歌词、人声、复杂装饰或成人化情绪。
 - 不得出现 2/4、108 BPM、90 秒、引子、主题 A、对比段、尾声、森林或探险等内容。

@@ -47,10 +47,13 @@
         <div class="theme-editor">
           <div class="editor-heading"><div><span class="editor-label">AI 任务说明</span><h3>审核心情母版提示词</h3></div><button class="button primary" id="generate-theme-button" type="button">AI 生成主题 JSON</button></div>
           <textarea id="theme-prompt-editor" rows="12" aria-label="心情主题提示词"></textarea>
-          <div class="theme-json-wrap is-hidden" id="theme-json-wrap">
-            <div class="editor-heading compact-heading"><div><span class="editor-label">生成结果</span><h3>检查并锁定主题母版</h3></div><button class="button dark" id="lock-theme-button" type="button">锁定为心情母版</button></div>
-            <textarea id="theme-json-editor" class="code-editor" rows="16" spellcheck="false" aria-label="心情主题JSON"></textarea>
-          </div>
+            <div class="theme-json-wrap is-hidden" id="theme-json-wrap">
+              <div class="editor-heading compact-heading"><div><span class="editor-label">生成结果</span><h3>检查并锁定主题母版</h3></div><button class="button dark" id="lock-theme-button" type="button">锁定为心情母版</button></div>
+              <textarea id="theme-json-editor" class="code-editor" rows="16" spellcheck="false" aria-label="心情主题JSON"></textarea>
+              <div class="theme-preview-actions"><button class="button secondary compact" id="theme-preview-button" type="button">生成母版试听</button><span>固定钢琴与中性节拍，只用于确认旋律和和声气质。</span></div>
+              <div class="preview-box is-hidden" id="theme-preview-box"><audio id="theme-preview-audio" controls preload="none"></audio></div>
+              <div class="revision-box" id="theme-revision-box"><label for="theme-revision-feedback"><strong>母版修改意见</strong><span>例如：整体更活泼明亮；核心动机保留上行感；和声更有阳光感。</span></label><textarea id="theme-revision-feedback" rows="3" maxlength="1200" placeholder="写下希望调整的心情、旋律轮廓、和声或力度。"></textarea><button class="button secondary compact" id="revise-theme-button" type="button">按意见修改母版</button></div>
+            </div>
           <div class="status" id="theme-status" role="status" aria-live="polite">选择一个心情开始制作。</div>
         </div>
       </div>
@@ -85,7 +88,7 @@
           </article>
           <article class="production-step">
             <div class="mini-number">3</div>
-            <div class="production-content"><div class="production-heading"><div><h3>试听完整改编</h3><p>系统会检查主题继承、节拍、音域和乐器规则，再渲染试听。</p></div><button class="button secondary compact" id="preview-button" type="button" disabled>生成试听</button></div><div class="preview-box is-hidden" id="preview-box"><audio id="preview-audio" controls preload="none"></audio><button class="button dark compact" id="approve-preview-button" type="button">确认这版音乐</button></div></div>
+            <div class="production-content"><div class="production-heading"><div><h3>试听完整改编</h3><p>系统会检查主题继承、节拍、音域和乐器规则，再渲染试听。</p></div><button class="button secondary compact" id="preview-button" type="button" disabled>生成试听</button></div><div class="preview-box is-hidden" id="preview-box"><audio id="preview-audio" controls preload="none"></audio><button class="button dark compact" id="approve-preview-button" type="button">确认这版音乐</button></div><div class="revision-box is-hidden" id="revision-box"><label for="revision-feedback"><strong>修改意见</strong><span>例如：整体更明亮轻盈；保留主旋律和律动；键盘提高音区，鼓点更清脆。</span></label><textarea id="revision-feedback" rows="4" maxlength="1200" placeholder="写下你想改变的听感、乐器或节奏。模型会参考当前 JSON、原提示词和这条意见来修改。"></textarea><button class="button secondary compact" id="revise-json-button" type="button">按意见重新生成</button></div></div>
           </article>
           <article class="production-step final-production-step">
             <div class="mini-number">4</div>

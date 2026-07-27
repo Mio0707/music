@@ -121,6 +121,13 @@ textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(2
 .json-preview { max-height: 330px; margin: 14px 0 0; padding: 16px; overflow: auto; border-radius: 14px; color: #dbe8f7; background: #202b3d; font: 12px/1.6 Consolas, monospace; white-space: pre-wrap; }
 .preview-box { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 13px; border-radius: 14px; background: var(--green-soft); }
 .preview-box audio { width: 100%; }
+.theme-preview-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
+.theme-preview-actions span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.revision-box { margin-top: 14px; padding: 14px; border: 1px solid #d7e7dd; border-radius: 14px; background: #f8fcf9; }
+.revision-box label { display: block; margin-bottom: 8px; }
+.revision-box label strong { display: block; color: var(--ink); }
+.revision-box label span { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; line-height: 1.5; }
+.revision-box textarea { width: 100%; min-height: 88px; box-sizing: border-box; margin-bottom: 10px; padding: 11px; border: 1px solid #cbdcd1; border-radius: 10px; color: var(--ink); font: inherit; line-height: 1.5; resize: vertical; }
 #workflow-status { margin: 0; padding: 14px 23px; border-top: 1px solid var(--line); background: #fbf8f2; }
 
 .library-heading { align-items: flex-start; }

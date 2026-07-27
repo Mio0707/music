@@ -45,8 +45,8 @@
             "properties": {
               "pitch": {"type": "string", "pattern": "^[A-G](#|b)?[4-5]$"},
               "beat": {"type": "number", "minimum": 0, "maximum": 7.75},
-              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.5},
-              "velocity": {"type": "integer", "minimum": 45, "maximum": 85}
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.75},
+              "velocity": {"type": "integer", "minimum": 55, "maximum": 100}
             }
           }
         }

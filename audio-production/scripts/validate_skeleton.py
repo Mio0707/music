@@ -63,6 +63,14 @@ def main() -> int:
         if not in_target_range:
             fail(errors, f"第 {index} 个旋律音 {pitch} 超出 C4—C5 的儿童测试音域。")
 
+    try:
+        melody_start = min(float(note["beat"]) for note in melody)
+        melody_end = max(float(note["beat"]) + float(note["duration"]) for note in melody)
+        if abs(melody_start) > 0.001 or abs(melody_end - task["totalBeats"]) > 0.001:
+            fail(errors, f"主旋律必须从第 0 拍开始并在第 {task['totalBeats']} 拍结束，当前为第 {melody_start:g} 到第 {melody_end:g} 拍。")
+    except (KeyError, TypeError, ValueError):
+        pass
+
     core_motif = task.get("coreMotif", {}).get("scaleDegrees")
     if isinstance(core_motif, list) and core_motif:
         melody_letters = []
@@ -103,8 +111,8 @@ def main() -> int:
                 fail(errors, f"第 {index} 个小狮子允许拍点超出两小节的 0—8 拍范围。")
 
     lion_notes = skeleton.get("lionNotes")
-    if not isinstance(lion_notes, list) or not 1 <= len(lion_notes) <= 4:
-        fail(errors, "lionNotes 必须包含 1—4 个萨克斯音。")
+    if not isinstance(lion_notes, list) or not 4 <= len(lion_notes) <= 6:
+        fail(errors, "lionNotes 必须包含 4—6 个萨克斯音，组成一小句回应。")
     else:
         allowed_positions = {float(beat) for beat in lion_allowed_beats} if isinstance(lion_allowed_beats, list) else set()
         for index, note in enumerate(lion_notes, start=1):
@@ -126,10 +134,10 @@ def main() -> int:
                 fail(errors, f"第 {index} 个萨克斯音 {pitch} 必须在 C 大调 C4—G5 音域内。")
             if beat not in allowed_positions:
                 fail(errors, f"第 {index} 个萨克斯音必须从 lionAllowedBeats 中指定的拍点开始。")
-            if not (0 < duration <= 0.5) or beat + duration > task["totalBeats"]:
-                fail(errors, f"第 {index} 个萨克斯音时长必须在 0—0.5 拍内，且不能超出两小节。")
-            if not (45 <= velocity <= 85):
-                fail(errors, f"第 {index} 个萨克斯音力度必须在 45—85 之间。")
+            if not (0 < duration <= 0.75) or beat + duration > task["totalBeats"]:
+                fail(errors, f"第 {index} 个萨克斯音时长必须在 0—0.75 拍内，且不能超出两小节。")
+            if not (55 <= velocity <= 100):
+                fail(errors, f"第 {index} 个萨克斯音力度必须在 55—100 之间。")
 
     if errors:
         print("检查未通过：")

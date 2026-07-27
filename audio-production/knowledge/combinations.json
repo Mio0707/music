@@ -4,7 +4,8 @@
     "motifRequired": true,
     "motifMinimumAppearances": 1,
     "preserveEmotionHarmony": true,
-    "lionMaximumNotes": 4
+    "lionMaximumNotes": 6,
+    "ensembleStyle": "纯编曲中的错位突出：键盘领奏核心动机，贝斯在旋律留白处用短句回应，鼓组以短鼓花交接，萨克斯在空隙以一小句回应收束；通过音区、强弱与留白避免所有乐器持续叠在同一拍"
   },
   "overrides": {
     "happy_steady": {"motifTransform": "延长与平稳重复", "energyAdjustment": -0.08},

@@ -28,10 +28,11 @@ RECORDS_DIR = AUDIO_DIR / "studio-data" / "records"
 KNOWLEDGE_DIR = AUDIO_DIR / "knowledge"
 THEMES_DIR = KNOWLEDGE_DIR / "themes"
 THEME_DRAFTS_DIR = AUDIO_DIR / "studio-data" / "theme-drafts"
+THEME_PREVIEWS_DIR = AUDIO_DIR / "studio-data" / "theme-previews"
 GENERATED_TASKS_DIR = AUDIO_DIR / "studio-data" / "generated-tasks"
 MAX_BODY_BYTES = 2 * 1024 * 1024
 ANIMALS = ("bear", "cat", "dog", "lion")
-RENDER_GAINS = {"bear": 0.45, "cat": 0.75, "dog": 0.45, "lion": 0.34}
+RENDER_GAINS = {"bear": 0.52, "cat": 0.82, "dog": 0.55, "lion": 0.52}
 FEELINGS = (
     ("happy", "开心"),
     ("calm", "安静"),
@@ -54,17 +55,17 @@ BEAR_TONES = {
 }
 
 EMOTION_BRIEFS = {
-    "happy": "明亮、亲切、有自然上行感；活泼但不过度兴奋。",
-    "calm": "安稳、柔和、留有呼吸；平静但不困倦。",
-    "brave": "坚定、清楚、有向前的方向；有力量但不紧张。",
-    "longing": "温柔、略带距离和回望；有想念感但不悲伤沉重。",
+    "happy": "明亮、亲切、自然上行；像一步步跳向阳光，活泼但不过度兴奋。",
+    "calm": "安稳、柔和、舒展留白；像慢慢展开的呼吸，平静但不困倦。",
+    "brave": "坚定、清楚、持续向前；像跨过小障碍后站稳，有力量但不紧张。",
+    "longing": "温柔、略带距离与回望；像回头看一眼再继续走，有想念感但不悲伤沉重。",
 }
 
 EMOTION_MOTIF_RULES = {
-    "happy": "整体以上行和回落为主，可出现明亮跳进；高点清楚，结束回到稳定音。",
-    "calm": "以级进和窄音域为主，减少大跳；轮廓平缓，句尾有充足停留。",
-    "brave": "使用清楚的重复音、上行四度或五度方向；重心稳定，结尾坚定。",
-    "longing": "使用拱形或缓慢下行轮廓，允许回望式重复；保留未立即解决的距离感。",
+    "happy": "核心目标是向上：整体以上行和明亮跳进为主，抵达清楚高点后回到稳定音。",
+    "calm": "核心目标是舒展：以级进和窄音域缓慢展开，句尾有充足停留与呼吸。",
+    "brave": "核心目标是向前：使用清楚重复音和上行四度或五度，重心稳定、结尾坚定。",
+    "longing": "核心目标是回望：使用拱形或缓慢下行轮廓，再以回望式重复留下未立即解决的距离感。",
 }
 
 DEGREE_TO_PITCH = {1: "C4", 2: "D4", 3: "E4", 4: "F4", 5: "G4", 6: "A4", 7: "B4"}
@@ -106,11 +107,12 @@ def theme_generation_prompt(emotion_id: str) -> str:
 
 项目固定条件：
 - 面向 {project['targetAge']} 岁儿童。
-- 固定 C 大调、4/4 拍，两小节测试长度。
+- 固定 C 大调、4/4 拍，严格两小节共 8 拍；主题动机必须从第 0 拍开始，并在第 8 拍完成收束。
 - 心情目标：{EMOTION_BRIEFS[emotion_id]}
 - 核心动机方向：{EMOTION_MOTIF_RULES[emotion_id]}
 - 这份母版之后会被改编成四种不同律动，因此核心身份必须来自音高关系、旋律轮廓、和声语言和收束方式，不能依赖某一种节奏。
-- 请为这个心情原创一段核心动机：使用 1—7 的音级数字，长度 4—8 个音；referenceDurations 与音级一一对应，仅为参考时值。
+- 母版强制节拍与收束要求：核心动机必须严格为两小节共 8 拍；referenceDurations 总和必须等于 8；最后一个音必须是主音（1 / do），在第 8 拍结束，并使用较长时值形成稳定、明亮、不突兀的收束。
+- 请为这个心情原创一段核心动机：使用 1—7 的音级数字，长度 4—8 个音；referenceDurations 与音级一一对应，所有时值相加必须严格等于 8 拍，最后一个音必须在第 8 拍结束。
 - 不得复用其他心情已经锁定的核心动机。现有记录：{locked_motif_text}。
 - 和弦只使用 C、Dm、Em、F、G、Am；primaryPlan 必须给出严格两小节可用的 4 个和弦符号。
 - 母版要定义共同的力度、触感和乐句呼吸，但不要在这里单独定义任何一种乐器。
@@ -121,7 +123,7 @@ def theme_generation_prompt(emotion_id: str) -> str:
 - version：固定为 "{emotion_id}-theme-v1"。
 - designIntent：一句话定义这个心情的音乐身份。
 - coreMotif.scaleDegrees：你原创的4—8个音级整数数组，每个值只能是1—7。
-- coreMotif.referenceDurations：与scaleDegrees等长的正数数组。
+- coreMotif.referenceDurations：与scaleDegrees等长的正数数组；所有数值相加必须严格等于 8。
 - coreMotif.requiredAppearances：固定为1。
 - melodyGrammar：包含contour、preferredIntervals、phraseEnding、noteDensity。
 - harmonyLanguage：包含primaryPlan、allowedChords、cadence；其中primaryPlan严格为4个和弦。
@@ -145,6 +147,12 @@ def validate_theme(theme: object, emotion_id: str) -> dict:
         raise ValueError("coreMotif.scaleDegrees 必须包含4—8个1—7音级。")
     if not isinstance(durations, list) or len(durations) != len(degrees) or any(not isinstance(value, (int, float)) or value <= 0 for value in durations):
         raise ValueError("核心动机的参考时值必须与音级一一对应。")
+    if abs(sum(float(value) for value in durations) - 8.0) > 0.001:
+        raise ValueError("核心动机的参考时值总和必须严格等于两小节的 8 拍。")
+    if degrees[-1] != 1:
+        raise ValueError("核心动机最后一个音必须是主音 1（do），形成稳定收束。")
+    if float(durations[-1]) < 1.0:
+        raise ValueError("核心动机最后一个主音必须至少保持 1 拍，避免突兀收尾。")
     for other_id, other_label in FEELINGS:
         path = theme_path(other_id)
         if other_id == emotion_id or not path.is_file():
@@ -197,6 +205,78 @@ def generate_theme(emotion_id: str, prompt: str) -> dict:
     return {"draftId": draft_id, "emotionId": emotion_id, "theme": theme, "prompt": prompt.strip()}
 
 
+def build_theme_preview_skeleton(emotion_id: str, theme: dict) -> dict:
+    degrees = theme["coreMotif"]["scaleDegrees"]
+    durations = theme["coreMotif"]["referenceDurations"]
+    melody = []
+    beat = 0.0
+    index = 0
+    while beat < 16:
+        duration = min(float(durations[index % len(durations)]), 16 - beat)
+        degree = degrees[index % len(degrees)]
+        melody.append({"pitch": DEGREE_TO_PITCH[degree], "beat": round(beat, 3), "duration": round(duration, 3), "velocity": 90})
+        beat += duration
+        index += 1
+    return {
+        "kitId": f"theme_{emotion_id}_preview", "feeling": theme["label"], "groove": "中性试听",
+        "bpm": 104, "timeSignature": "4/4", "key": "C", "bars": 4, "melody": melody,
+        "chords": [{"symbol": chord, "beat": index * 4} for index, chord in enumerate(theme["harmonyLanguage"]["primaryPlan"])],
+        "bassRoots": [], "drumGrid": [], "lionAllowedBeats": [], "lionNotes": [],
+    }
+
+
+def preview_theme(emotion_id: str, theme: object) -> dict:
+    if emotion_id not in dict(FEELINGS):
+        raise ValueError("无法识别这个心情。")
+    validated = validate_theme(theme, emotion_id)
+    fluidsynth, soundfont = default_tools()
+    if not fluidsynth.is_file() or not soundfont.is_file():
+        raise ValueError("找不到音频渲染工具，请联系平台管理员。")
+    preview_id = f"{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
+    preview_dir = THEME_PREVIEWS_DIR / safe_id(emotion_id) / preview_id
+    preview_dir.mkdir(parents=True, exist_ok=False)
+    skeleton_path = preview_dir / "theme-preview.json"
+    midi_path = preview_dir / "theme-preview.mid"
+    wav_path = preview_dir / "theme-preview.wav"
+    skeleton_path.write_text(json.dumps(build_theme_preview_skeleton(emotion_id, validated), ensure_ascii=False, indent=2), encoding="utf-8")
+    run_script(SCRIPTS_DIR / "render_midi.py", "--skeleton", skeleton_path, "--output", midi_path)
+    run_script(SCRIPTS_DIR / "render_wav.py", "--fluidsynth", fluidsynth, "--soundfont", soundfont, "--midi", midi_path, "--output", wav_path, "--gain", "0.38", "--duration-seconds", str(16 * 60 / 104), "--loop-crossfade-ms", "20")
+    return {"previewUrl": f"/theme-previews/{safe_id(emotion_id)}/{preview_id}/theme-preview.wav"}
+
+
+def revise_theme(emotion_id: str, theme: object, prompt: str, feedback: str) -> dict:
+    if emotion_id not in dict(FEELINGS):
+        raise ValueError("无法识别这个心情。")
+    current_theme = validate_theme(theme, emotion_id)
+    if not isinstance(prompt, str) or len(prompt.strip()) < 200:
+        raise ValueError("找不到完整的主题提示词，请刷新页面后重试。")
+    if not isinstance(feedback, str) or not 4 <= len(feedback.strip()) <= 1200:
+        raise ValueError("修改意见请写 4 到 1200 个字符。")
+    draft_id = f"{emotion_id}_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
+    draft_dir = THEME_DRAFTS_DIR / safe_id(emotion_id) / draft_id
+    draft_dir.mkdir(parents=True, exist_ok=False)
+    (draft_dir / "previous.json").write_text(json.dumps(current_theme, ensure_ascii=False, indent=2), encoding="utf-8")
+    (draft_dir / "feedback.txt").write_text(feedback.strip() + "\n", encoding="utf-8")
+    revision_prompt = f"""{prompt.strip()}
+
+现在需要按照用户意见修改已经生成的心情主题母版。只返回完整 JSON 对象，不要输出解释或 Markdown。除非用户明确要求，请保留 emotionId、label、version、核心音乐身份与原提示词的所有格式限制；不要加入具体律动或乐器安排。母版强制节拍与收束要求：coreMotif.referenceDurations 必须与音级一一对应，时值总和严格等于两小节的 8 拍；最后一个音必须是主音（1 / do），在第 8 拍结束，并使用较长时值形成稳定、明亮、不突兀的收束。
+
+当前主题 JSON：
+{json.dumps(current_theme, ensure_ascii=False, indent=2)}
+
+用户修改意见：
+{feedback.strip()}
+"""
+    prompt_path = draft_dir / "revision-prompt.txt"
+    output_path = draft_dir / "theme.json"
+    raw_path = draft_dir / "qwen.raw.json"
+    prompt_path.write_text(revision_prompt, encoding="utf-8")
+    run_script(SCRIPTS_DIR / "generate_json_document.py", "--prompt-file", prompt_path, "--output", output_path, "--raw-output", raw_path)
+    revised = validate_theme(read_json(output_path), emotion_id)
+    output_path.write_text(json.dumps(revised, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"draftId": draft_id, "emotionId": emotion_id, "theme": revised, "prompt": prompt.strip()}
+
+
 def lock_theme(emotion_id: str, theme: object) -> dict:
     validated = validate_theme(theme, emotion_id)
     THEMES_DIR.mkdir(parents=True, exist_ok=True)
@@ -217,7 +297,7 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
     groove = grooves[groove_id]
     instruments = read_json(KNOWLEDGE_DIR / "instruments.json")
     combination_rules = read_json(KNOWLEDGE_DIR / "combinations.json")
-    override = combination_rules["overrides"][f"{emotion_id}_{groove_id}"]
+    override = {**combination_rules["overrides"][f"{emotion_id}_{groove_id}"], "ensembleStyle": combination_rules["defaults"]["ensembleStyle"]}
     kit_id = f"{emotion_id}_{groove_id}_v01"
     task = {
         "kitId": kit_id,
@@ -261,8 +341,9 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
 继承要求：
 - melody 中必须按顺序完整出现一次核心动机音高：{', '.join(motif_pitches)}；可以改变八度内位置和每个音的时值，但不能改变音高顺序。
 - chords 必须使用主题母版 harmonyLanguage.primaryPlan 中的4个和弦，并分别从第0、2、4、6拍开始。
-- 键盘、贝斯和鼓必须按照动物乐器规则分别承担和声、低音与节奏职责，并执行律动模板。
-- 小狮子萨克斯与其他乐器使用同一层级的动物乐器规则；在 lionNotes 中写出1—4个具体短回应音符。
+- 律动模板中的 identity、melodyRhythm、drumRule、bassRule、keyboardRule 都是强制执行规则。不同律动不能只改 BPM：必须明显改变旋律时值与留白、鼓点拍位、贝斯时值与进入位置，以及萨克斯的进入空隙。
+- 这是纯编曲，不依赖视觉角色。四件乐器用错位的音区、强弱与留白形成短暂突出：键盘在开头清楚领奏核心动机；贝斯在旋律停顿处安排一次有方向的短句；鼓组在乐句交接处安排一次短鼓花；萨克斯在主旋律空隙写一小句回应。不要让所有乐器持续叠在同一拍。
+- 小狮子萨克斯与其他乐器使用同一层级的动物乐器规则；在 lionNotes 中写出4—6个具体音符，组成一句回应；其进入拍点必须服从当前律动，不得沿用其他律动的固定位置。
 
 只返回JSON对象，顶层字段必须为：kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats、lionNotes。
 示例结构：
@@ -278,10 +359,10 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
   "chords": [{{"beat":0,"symbol":"C"}}],
   "bassRoots": [{{"pitch":"C2","beat":0,"duration":1}}],
   "drumGrid": [{{"instrument":"kick","beat":0,"duration":0.25}}],
-  "lionAllowedBeats": [3.5,7.5],
-  "lionNotes": [{{"pitch":"G4","beat":3.5,"duration":0.25,"velocity":68}}]
+  "lionAllowedBeats": [2.5,3,3.5,6,6.5,7],
+  "lionNotes": [{{"pitch":"E5","beat":2.5,"duration":0.5,"velocity":88}}, {{"pitch":"G5","beat":3,"duration":0.5,"velocity":90}}, {{"pitch":"E5","beat":3.5,"duration":0.5,"velocity":86}}, {{"pitch":"C5","beat":6,"duration":0.5,"velocity":88}}]
 }}
-所有音符结束时间不得超过第8拍；旋律限C4—C5，萨克斯限C4—G5；不要歌词、人声、转调或复杂装饰。
+所有音符结束时间不得超过第8拍；melody 必须从第0拍开始，最后一个旋律音必须在第8拍结束，完整占满两小节；旋律限C4—C5，萨克斯限C4—G5；不要歌词、人声、转调或复杂装饰。
 """
     GENERATED_TASKS_DIR.mkdir(parents=True, exist_ok=True)
     generated_task_path(kit_id).write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -488,6 +569,68 @@ def generate_record_json(record_id: str) -> dict:
     record["jsonUrl"] = record_url(record_dir, output_path)
     record["rawUrl"] = record_url(record_dir, raw_path)
     production_event(record, "JSON 已通过自动检查", "可以生成整段试听")
+    save_record(record_dir, record)
+    return {**record, "skeleton": skeleton}
+
+
+def revise_record_json(record_id: str, feedback: str) -> dict:
+    record_dir, record = read_record(record_id)
+    if record.get("status") not in {"json_ready", "preview_ready"}:
+        raise ValueError("请先生成并试听 JSON；确认正式分轨后不能再修改这一版。")
+    if not isinstance(feedback, str) or not 4 <= len(feedback.strip()) <= 1200:
+        raise ValueError("修改意见请写 4 到 1200 个字符。")
+
+    skeleton_path = record_dir / "generated.json"
+    prompt_path = record_dir / "prompt.txt"
+    if not skeleton_path.is_file() or not prompt_path.is_file():
+        raise ValueError("找不到当前 JSON 或原始提示词。")
+
+    revision_id = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    revision_dir = record_dir / "revisions" / revision_id
+    revision_dir.mkdir(parents=True, exist_ok=False)
+    current_skeleton = read_json(skeleton_path)
+    original_prompt = prompt_path.read_text(encoding="utf-8").strip()
+    (revision_dir / "previous.json").write_text(json.dumps(current_skeleton, ensure_ascii=False, indent=2), encoding="utf-8")
+    (revision_dir / "feedback.txt").write_text(feedback.strip() + "\n", encoding="utf-8")
+
+    revision_prompt = f"""{original_prompt}
+
+现在需要在不改变任务身份的前提下修改一份已经生成的音乐 JSON。
+必须只返回完整 JSON 对象，字段、数据结构和音符格式必须与当前 JSON 保持兼容；不要输出解释或 Markdown。
+保留心情母版的核心动机、歌曲的 kitId、feeling、groove、拍号、小节数和基本段落结构，除非用户明确要求修改。
+修改后仍须符合原提示词中的所有乐器、音域、节拍和主题继承规则。
+歌曲必须严格两小节共 8 拍：melody 从第 0 拍开始，最后一个旋律音必须在第 8 拍结束，不能提前结束或超出。
+新版乐队规则：这是纯编曲，不依赖视觉角色。四件乐器用错位的音区、强弱与留白形成短暂突出：键盘领奏核心动机；贝斯在旋律停顿处安排一次有方向的短句；鼓组在乐句交接处安排一次短鼓花；萨克斯在主旋律空隙写4—6个音组成的一小句回应。不要让所有乐器持续叠在同一拍。
+
+当前 JSON：
+{json.dumps(current_skeleton, ensure_ascii=False, indent=2)}
+
+用户修改意见：
+{feedback.strip()}
+"""
+    revision_prompt_path = revision_dir / "revision-prompt.txt"
+    revision_prompt_path.write_text(revision_prompt, encoding="utf-8")
+    output_path = record_dir / "generated.json"
+    raw_path = revision_dir / "qwen.raw.json"
+    try:
+        run_script(
+            SCRIPTS_DIR / "generate_skeleton_json_mode.py",
+            "--task", task_path_for_kit(record["kitId"]),
+            "--prompt-file", revision_prompt_path,
+            "--output", output_path,
+            "--raw-output", raw_path,
+        )
+        run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path_for_kit(record["kitId"]), "--skeleton", output_path)
+    except ValueError:
+        (revision_dir / "failed.json").write_text(output_path.read_text(encoding="utf-8"), encoding="utf-8") if output_path.is_file() else None
+        (revision_dir / "previous.json").replace(output_path)
+        raise
+
+    skeleton = read_json(output_path)
+    record["status"] = "json_ready"
+    record.pop("previewUrl", None)
+    record["revisionCount"] = int(record.get("revisionCount", 0)) + 1
+    production_event(record, "JSON 已按修改意见更新", feedback.strip())
     save_record(record_dir, record)
     return {**record, "skeleton": skeleton}
 
@@ -859,6 +1002,14 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.serve_file(candidate)
             return
+        if request_path.startswith("/theme-previews/"):
+            relative = Path(request_path.removeprefix("/theme-previews/"))
+            candidate = (THEME_PREVIEWS_DIR / relative).resolve()
+            if THEME_PREVIEWS_DIR.resolve() not in candidate.parents:
+                self.send_error(403)
+                return
+            self.serve_file(candidate)
+            return
         if request_path.startswith("/jobs/"):
             relative = Path(request_path.removeprefix("/jobs/"))
             candidate = (JOBS_DIR / relative).resolve()
@@ -889,11 +1040,20 @@ class Handler(BaseHTTPRequestHandler):
             if self.path == "/api/themes/generate":
                 self.send_json(200, generate_theme(payload.get("emotionId", ""), payload.get("prompt", "")))
                 return
+            if self.path == "/api/themes/preview":
+                self.send_json(200, preview_theme(payload.get("emotionId", ""), payload.get("theme")))
+                return
+            if self.path == "/api/themes/revise":
+                self.send_json(200, revise_theme(payload.get("emotionId", ""), payload.get("theme"), payload.get("prompt", ""), payload.get("feedback", "")))
+                return
             if self.path == "/api/themes/lock":
                 self.send_json(200, lock_theme(payload.get("emotionId", ""), payload.get("theme")))
                 return
             if self.path == "/api/records/generate":
                 self.send_json(200, generate_record_json(payload.get("recordId", "")))
+                return
+            if self.path == "/api/records/revise":
+                self.send_json(200, revise_record_json(payload.get("recordId", ""), payload.get("feedback", "")))
                 return
             if self.path == "/api/records/preview":
                 self.send_json(200, render_record_preview(payload.get("recordId", "")))
