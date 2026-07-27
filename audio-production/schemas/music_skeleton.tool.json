@@ -6,7 +6,7 @@
     "parameters": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["kitId", "feeling", "groove", "bpm", "timeSignature", "key", "bars", "melody", "chords", "bassRoots", "drumGrid", "lionAllowedBeats"],
+      "required": ["kitId", "feeling", "groove", "bpm", "timeSignature", "key", "bars", "melody", "chords", "bassRoots", "drumGrid", "lionAllowedBeats", "lionNotes"],
       "properties": {
         "kitId": {"type": "string", "const": "happy_bounce_v01"},
         "feeling": {"type": "string", "const": "happy"},
@@ -33,7 +33,23 @@
         "chords": {"type": "array", "minItems": 1, "items": {"type": "object"}},
         "bassRoots": {"type": "array", "minItems": 1, "items": {"type": "object"}},
         "drumGrid": {"type": "array", "minItems": 1, "items": {"type": "object"}},
-        "lionAllowedBeats": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 7.75}}
+        "lionAllowedBeats": {"type": "array", "items": {"type": "number", "minimum": 0, "maximum": 7.75}},
+        "lionNotes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 4,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pitch", "beat", "duration", "velocity"],
+            "properties": {
+              "pitch": {"type": "string", "pattern": "^[A-G](#|b)?[4-5]$"},
+              "beat": {"type": "number", "minimum": 0, "maximum": 7.75},
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 0.5},
+              "velocity": {"type": "integer", "minimum": 45, "maximum": 85}
+            }
+          }
+        }
       }
     }
   }

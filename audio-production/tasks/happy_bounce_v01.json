@@ -9,7 +9,7 @@
   "totalBeats": 8,
   "targetAge": "6-12",
   "melodyRange": ["C4", "C5"],
-  "model": "qwen3.7-plus",
+  "model": "qwen3.7-max",
   "forbidden": [
     "转调",
     "临时变速",

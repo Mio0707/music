@@ -12,7 +12,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_FIELDS = {"kitId", "bpm", "timeSignature", "key", "bars", "melody", "chords", "bassRoots", "drumGrid", "lionAllowedBeats"}
+REQUIRED_FIELDS = {"kitId", "bpm", "timeSignature", "key", "bars", "melody", "chords", "bassRoots", "drumGrid", "lionAllowedBeats", "lionNotes"}
 
 
 def parse_model_response(raw: str) -> dict:

@@ -1,0 +1,54 @@
+[
+  {
+    "id": "steady",
+    "label": "稳稳走",
+    "bpm": 88,
+    "subdivision": "1/4 与 1/8",
+    "accent": "第一拍最清楚，第三拍轻支撑",
+    "melodyRhythm": "以均匀四分音符为骨架，少量成对八分音符",
+    "drumRule": "底鼓落在第1、3拍，军鼓落在第2、4拍，踩镲保持八分音符",
+    "bassRule": "每两拍一个稳定根音，避免切分",
+    "keyboardRule": "整齐柱式和弦或轻柔分解",
+    "energy": 0.45,
+    "syncopation": 0.05
+  },
+  {
+    "id": "bounce",
+    "label": "蹦蹦跳",
+    "bpm": 96,
+    "subdivision": "1/8",
+    "accent": "短音、休止与轻巧反弹感",
+    "melodyRhythm": "短八分音符、重复音和清楚休止",
+    "drumRule": "底鼓强调第1、3拍，军鼓第2、4拍，踩镲八分音符形成弹跳",
+    "bassRule": "短根音跟随底鼓，可在后半拍轻回应",
+    "keyboardRule": "短促和弦，避免持续铺满",
+    "energy": 0.68,
+    "syncopation": 0.2
+  },
+  {
+    "id": "sway",
+    "label": "摇一摇",
+    "bpm": 84,
+    "subdivision": "1/8",
+    "accent": "左右摆动感，重音柔和交替",
+    "melodyRhythm": "长短交替，允许少量弱拍进入",
+    "drumRule": "底鼓保持第1拍，军鼓较轻，踩镲用长短交替制造摇摆",
+    "bassRule": "根音与五度交替，留出呼吸",
+    "keyboardRule": "分解和弦左右交替",
+    "energy": 0.42,
+    "syncopation": 0.28
+  },
+  {
+    "id": "forward",
+    "label": "向前冲",
+    "bpm": 108,
+    "subdivision": "1/8",
+    "accent": "连续推进，第一拍和第三拍有方向感",
+    "melodyRhythm": "连续八分音符与上行推进，句尾明确收束",
+    "drumRule": "底鼓增加推进落点，军鼓保持第2、4拍，踩镲连续八分音符",
+    "bassRule": "每拍根音或根音与五度交替，保持前进",
+    "keyboardRule": "有规律的重复和弦型",
+    "energy": 0.82,
+    "syncopation": 0.18
+  }
+]

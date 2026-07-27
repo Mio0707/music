@@ -38,5 +38,9 @@
     { "instrument": "kick", "beat": 6, "duration": 0.25 },
     { "instrument": "snare", "beat": 7, "duration": 0.25 }
   ],
-  "lionAllowedBeats": [3.5, 7.5]
+  "lionAllowedBeats": [3.5, 7.5],
+  "lionNotes": [
+    { "pitch": "G5", "beat": 3.5, "duration": 0.25, "velocity": 68 },
+    { "pitch": "C5", "beat": 7.5, "duration": 0.4, "velocity": 60 }
+  ]
 }

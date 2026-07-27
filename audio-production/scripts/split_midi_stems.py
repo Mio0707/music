@@ -12,6 +12,7 @@ STEM_TRACKS = {
     "bear": {"Bear and Rabbit shared melody", "Bear keyboard harmony"},
     "cat": {"Cat bass roots"},
     "dog": {"Dog drum grid"},
+    "lion": {"Lion alto sax responses"},
 }
 
 

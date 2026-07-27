@@ -12,7 +12,7 @@
 - 长度：严格两小节，共 8 拍。
 - 主旋律音域：C4 到 C5。
 
-必须调用工具 submit_music_skeleton 提交答案，不能输出普通聊天文字、Markdown 或课程方案。工具参数顶层字段必须且只能包含 kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats。参数必须符合下列结构：
+必须调用工具 submit_music_skeleton 提交答案，不能输出普通聊天文字、Markdown 或课程方案。工具参数顶层字段必须且只能包含 kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats、lionNotes。参数必须符合下列结构：
 {
   "kitId": "happy_bounce_v01",
   "feeling": "happy",
@@ -34,7 +34,11 @@
     {"instrument":"kick","beat":0,"duration":0.25},
     {"instrument":"snare","beat":1,"duration":0.25}
   ],
-  "lionAllowedBeats": [3.5,7.5]
+  "lionAllowedBeats": [3.5,7.5],
+  "lionNotes": [
+    {"pitch":"G5","beat":3.5,"duration":0.25,"velocity":68},
+    {"pitch":"C5","beat":7.5,"duration":0.4,"velocity":60}
+  ]
 }
 
 规则：
@@ -42,5 +46,8 @@
 - beat 从 0 开始；所有音符结束时间不能超过第 8 拍。
 - 只使用 C 大调音级；solfege 使用首调 do、re、mi、fa、sol、la、si。
 - 旋律要简单、容易哼唱，避免复杂切分。
+- lionNotes 是小狮子的中音萨克斯短句，必须直接写出每个音的 pitch、beat、duration、velocity，不能只给文字描述或让程序自行补写。
+- 每个 lionNotes 的 beat 必须来自 lionAllowedBeats；只写 1—4 个短音，每个音最长 0.5 拍，不能遮住主旋律或形成持续独奏。
+- 萨克斯短句应回应当前组合的开心和蹦蹦跳律动：明亮、短促、带弹跳感，可使用上行或回声式回应；只使用 C 大调音级，音域限制在 C4 到 G5。
 - 不要转调、临时变速、歌词、人声、复杂装饰或成人化情绪。
 - 不得出现 2/4、108 BPM、90 秒、引子、主题 A、对比段、尾声、森林或探险等内容。

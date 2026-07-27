@@ -1,0 +1,27 @@
+{
+  "version": "combination-rules-v1",
+  "defaults": {
+    "motifRequired": true,
+    "motifMinimumAppearances": 1,
+    "preserveEmotionHarmony": true,
+    "lionMaximumNotes": 4
+  },
+  "overrides": {
+    "happy_steady": {"motifTransform": "延长与平稳重复", "energyAdjustment": -0.08},
+    "happy_bounce": {"motifTransform": "缩短、重复并加入休止", "energyAdjustment": 0.1},
+    "happy_sway": {"motifTransform": "长短交替并轻微弱拍进入", "energyAdjustment": -0.02},
+    "happy_forward": {"motifTransform": "压缩时值并强化上行推进", "energyAdjustment": 0.16},
+    "calm_steady": {"motifTransform": "保持完整长句", "energyAdjustment": -0.08},
+    "calm_bounce": {"motifTransform": "轻短但不兴奋", "energyAdjustment": 0.03},
+    "calm_sway": {"motifTransform": "延长句尾并柔和摆动", "energyAdjustment": -0.05},
+    "calm_forward": {"motifTransform": "均匀连续、限制力度", "energyAdjustment": 0.08},
+    "brave_steady": {"motifTransform": "突出强拍与稳定重复", "energyAdjustment": 0.03},
+    "brave_bounce": {"motifTransform": "短促问答、保持坚定", "energyAdjustment": 0.1},
+    "brave_sway": {"motifTransform": "宽阔长短交替", "energyAdjustment": 0},
+    "brave_forward": {"motifTransform": "连续推进并强化句尾", "energyAdjustment": 0.18},
+    "longing_steady": {"motifTransform": "延长核心音与句尾", "energyAdjustment": -0.1},
+    "longing_bounce": {"motifTransform": "轻微重复但保留留白", "energyAdjustment": 0.02},
+    "longing_sway": {"motifTransform": "弱拍进入与呼吸式停顿", "energyAdjustment": -0.04},
+    "longing_forward": {"motifTransform": "连续但不过度激昂", "energyAdjustment": 0.08}
+  }
+}

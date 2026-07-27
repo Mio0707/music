@@ -31,7 +31,7 @@ def add_notes(track: MidiTrack, notes: list[dict], channel: int, velocity: int) 
         start = round(float(note["beat"]) * TICKS_PER_BEAT)
         end = round((float(note["beat"]) + float(note["duration"])) * TICKS_PER_BEAT)
         value = midi_note(note["pitch"])
-        events.append((start, value, True, velocity))
+        events.append((start, value, True, int(note.get("velocity", velocity))))
         events.append((end, value, False, 0))
     events.sort(key=lambda item: (item[0], item[2]))
     last_tick = 0
@@ -63,6 +63,36 @@ def add_chords(track: MidiTrack, chords: list[dict], total_beats: int) -> None:
     for tick, value, is_on, velocity in events:
         track.append(Message("note_on" if is_on else "note_off", note=value, velocity=velocity, channel=2, time=tick - last_tick))
         last_tick = tick
+
+
+def lion_response_notes(data: dict) -> list[dict]:
+    """优先使用 AI 写明的萨克斯短句；旧 JSON 才使用兼容性补写。"""
+    if data.get("lionNotes"):
+        return data["lionNotes"]
+
+    # 兼容已经生成过的旧版 JSON：它们只提供允许进入的位置。
+    melody = data.get("melody", [])
+    responses = []
+    for beat in data.get("lionAllowedBeats", []):
+        position = float(beat)
+        source = next(
+            (
+                note for note in melody
+                if float(note["beat"]) <= position < float(note["beat"]) + float(note["duration"])
+            ),
+            None,
+        )
+        if source is None:
+            continue
+        pitch = source["pitch"]
+        match = PITCH_RE.match(pitch)
+        if match is None:
+            continue
+        letter, accidental, octave_text = match.groups()
+        # 小狮子只作高八度的短回应，避免遮住小熊和小兔的主旋律。
+        octave = min(5, int(octave_text) + 1)
+        responses.append({"pitch": f"{letter}{accidental}{octave}", "beat": position, "duration": 0.4})
+    return responses
 
 
 def main() -> int:
@@ -117,6 +147,12 @@ def main() -> int:
     for tick, value, is_on in events:
         drum_track.append(Message("note_on" if is_on else "note_off", note=value, velocity=92 if is_on else 0, channel=9, time=tick - last_tick))
         last_tick = tick
+
+    lion_track = MidiTrack()
+    midi.tracks.append(lion_track)
+    lion_track.append(MetaMessage("track_name", name="Lion alto sax responses", time=0))
+    lion_track.append(Message("program_change", program=65, channel=3, time=0))
+    add_notes(lion_track, lion_response_notes(data), channel=3, velocity=72)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     midi.save(args.output)

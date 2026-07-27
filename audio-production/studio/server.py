@@ -24,9 +24,26 @@ AUDIO_DIR = STUDIO_DIR.parent
 SCRIPTS_DIR = AUDIO_DIR / "scripts"
 TASKS_DIR = AUDIO_DIR / "tasks"
 JOBS_DIR = AUDIO_DIR / "studio-data" / "jobs"
+RECORDS_DIR = AUDIO_DIR / "studio-data" / "records"
+KNOWLEDGE_DIR = AUDIO_DIR / "knowledge"
+THEMES_DIR = KNOWLEDGE_DIR / "themes"
+THEME_DRAFTS_DIR = AUDIO_DIR / "studio-data" / "theme-drafts"
+GENERATED_TASKS_DIR = AUDIO_DIR / "studio-data" / "generated-tasks"
 MAX_BODY_BYTES = 2 * 1024 * 1024
-ANIMALS = ("bear", "cat", "dog")
-RENDER_GAINS = {"bear": 0.45, "cat": 0.75, "dog": 0.45}
+ANIMALS = ("bear", "cat", "dog", "lion")
+RENDER_GAINS = {"bear": 0.45, "cat": 0.75, "dog": 0.45, "lion": 0.34}
+FEELINGS = (
+    ("happy", "开心"),
+    ("calm", "安静"),
+    ("brave", "勇敢"),
+    ("longing", "想念"),
+)
+GROOVES = (
+    ("steady", "稳稳走"),
+    ("bounce", "蹦蹦跳"),
+    ("sway", "摇一摇"),
+    ("forward", "向前冲"),
+)
 BEAR_TONES = {
     "grand_piano": {"label": "大钢琴", "bank": 0, "program": 0},
     "violin": {"label": "小提琴", "bank": 0, "program": 40},
@@ -36,12 +53,287 @@ BEAR_TONES = {
     "flute": {"label": "长笛", "bank": 0, "program": 73},
 }
 
+EMOTION_BRIEFS = {
+    "happy": "明亮、亲切、有自然上行感；活泼但不过度兴奋。",
+    "calm": "安稳、柔和、留有呼吸；平静但不困倦。",
+    "brave": "坚定、清楚、有向前的方向；有力量但不紧张。",
+    "longing": "温柔、略带距离和回望；有想念感但不悲伤沉重。",
+}
+
+EMOTION_MOTIF_RULES = {
+    "happy": "整体以上行和回落为主，可出现明亮跳进；高点清楚，结束回到稳定音。",
+    "calm": "以级进和窄音域为主，减少大跳；轮廓平缓，句尾有充足停留。",
+    "brave": "使用清楚的重复音、上行四度或五度方向；重心稳定，结尾坚定。",
+    "longing": "使用拱形或缓慢下行轮廓，允许回望式重复；保留未立即解决的距离感。",
+}
+
+DEGREE_TO_PITCH = {1: "C4", 2: "D4", 3: "E4", 4: "F4", 5: "G4", 6: "A4", 7: "B4"}
+
+
+def read_json(path: Path) -> dict | list:
+    return json.loads(path.read_text(encoding="utf-8"))
+
+
+def theme_path(emotion_id: str) -> Path:
+    return THEMES_DIR / f"{safe_id(emotion_id)}.json"
+
+
+def generated_task_path(kit_id: str) -> Path:
+    return GENERATED_TASKS_DIR / f"{safe_id(kit_id)}.json"
+
+
+def task_path_for_kit(kit_id: str) -> Path:
+    generated = generated_task_path(kit_id)
+    return generated if generated.is_file() else TASKS_DIR / f"{safe_id(kit_id)}.json"
+
+
+def theme_generation_prompt(emotion_id: str) -> str:
+    labels = dict(FEELINGS)
+    if emotion_id not in labels:
+        raise ValueError("无法识别这个心情。")
+    project = read_json(KNOWLEDGE_DIR / "project.json")
+    locked_motifs = []
+    for other_id, other_label in FEELINGS:
+        path = theme_path(other_id)
+        if other_id == emotion_id or not path.is_file():
+            continue
+        other_theme = read_json(path)
+        degrees = other_theme.get("coreMotif", {}).get("scaleDegrees", [])
+        if degrees:
+            locked_motifs.append(f"{other_label}：{'-'.join(str(value) for value in degrees)}")
+    locked_motif_text = "；".join(locked_motifs) if locked_motifs else "目前还没有其他已锁定主题"
+    return f"""你是本项目的儿童音乐主题设计师。请只设计“{labels[emotion_id]}”的心情主题母版，不要加入稳稳走、蹦蹦跳、摇一摇或向前冲中的任何具体律动。
+
+项目固定条件：
+- 面向 {project['targetAge']} 岁儿童。
+- 固定 C 大调、4/4 拍，两小节测试长度。
+- 心情目标：{EMOTION_BRIEFS[emotion_id]}
+- 核心动机方向：{EMOTION_MOTIF_RULES[emotion_id]}
+- 这份母版之后会被改编成四种不同律动，因此核心身份必须来自音高关系、旋律轮廓、和声语言和收束方式，不能依赖某一种节奏。
+- 请为这个心情原创一段核心动机：使用 1—7 的音级数字，长度 4—8 个音；referenceDurations 与音级一一对应，仅为参考时值。
+- 不得复用其他心情已经锁定的核心动机。现有记录：{locked_motif_text}。
+- 和弦只使用 C、Dm、Em、F、G、Am；primaryPlan 必须给出严格两小节可用的 4 个和弦符号。
+- 母版要定义共同的力度、触感和乐句呼吸，但不要在这里单独定义任何一种乐器。
+
+只返回JSON对象，不要返回Markdown。必须严格包含以下字段：
+- emotionId：固定为 "{emotion_id}"。
+- label：固定为 "{labels[emotion_id]}"。
+- version：固定为 "{emotion_id}-theme-v1"。
+- designIntent：一句话定义这个心情的音乐身份。
+- coreMotif.scaleDegrees：你原创的4—8个音级整数数组，每个值只能是1—7。
+- coreMotif.referenceDurations：与scaleDegrees等长的正数数组。
+- coreMotif.requiredAppearances：固定为1。
+- melodyGrammar：包含contour、preferredIntervals、phraseEnding、noteDensity。
+- harmonyLanguage：包含primaryPlan、allowedChords、cadence；其中primaryPlan严格为4个和弦。
+- expression：包含dynamicRange、articulation、phraseBreath。
+
+提示词没有提供任何示例旋律。你必须根据“{labels[emotion_id]}”的目标和核心动机方向自行创作，不能自行套用常见示例数组。
+"""
+
+
+def validate_theme(theme: object, emotion_id: str) -> dict:
+    if not isinstance(theme, dict):
+        raise ValueError("心情主题JSON最外层必须是对象。")
+    if theme.get("emotionId") != emotion_id:
+        raise ValueError("心情主题编号与当前选择不一致。")
+    motif = theme.get("coreMotif")
+    if not isinstance(motif, dict):
+        raise ValueError("心情主题缺少 coreMotif。")
+    degrees = motif.get("scaleDegrees")
+    durations = motif.get("referenceDurations")
+    if not isinstance(degrees, list) or not 4 <= len(degrees) <= 8 or any(not isinstance(value, int) or not 1 <= value <= 7 for value in degrees):
+        raise ValueError("coreMotif.scaleDegrees 必须包含4—8个1—7音级。")
+    if not isinstance(durations, list) or len(durations) != len(degrees) or any(not isinstance(value, (int, float)) or value <= 0 for value in durations):
+        raise ValueError("核心动机的参考时值必须与音级一一对应。")
+    for other_id, other_label in FEELINGS:
+        path = theme_path(other_id)
+        if other_id == emotion_id or not path.is_file():
+            continue
+        other_degrees = read_json(path).get("coreMotif", {}).get("scaleDegrees")
+        if other_degrees == degrees:
+            raise ValueError(f"核心动机与已锁定的“{other_label}”完全相同，请重新生成不同旋律。")
+    harmony = theme.get("harmonyLanguage")
+    allowed_chords = {"C", "Dm", "Em", "F", "G", "Am"}
+    if not isinstance(harmony, dict) or not isinstance(harmony.get("primaryPlan"), list) or len(harmony["primaryPlan"]) != 4:
+        raise ValueError("harmonyLanguage.primaryPlan 必须包含4个和弦。")
+    if any(chord not in allowed_chords for chord in harmony["primaryPlan"]):
+        raise ValueError("主题和弦超出当前C大调儿童音乐方案库。")
+    for field in ("melodyGrammar", "expression"):
+        if not isinstance(theme.get(field), dict):
+            raise ValueError(f"心情主题缺少 {field}。")
+    return theme
+
+
+def latest_theme_draft(emotion_id: str) -> dict | None:
+    root = THEME_DRAFTS_DIR / safe_id(emotion_id)
+    candidates = sorted(root.glob("*/theme.json"), key=lambda path: path.stat().st_mtime, reverse=True) if root.is_dir() else []
+    if not candidates:
+        return None
+    path = candidates[0]
+    return {"draftId": path.parent.name, "theme": read_json(path), "createdAt": datetime.fromtimestamp(path.stat().st_mtime).isoformat(timespec="seconds")}
+
+
+def generate_theme(emotion_id: str, prompt: str) -> dict:
+    labels = dict(FEELINGS)
+    if emotion_id not in labels:
+        raise ValueError("无法识别这个心情。")
+    if not isinstance(prompt, str) or len(prompt.strip()) < 200:
+        raise ValueError("请保留完整的心情主题提示词。")
+    draft_id = f"{emotion_id}_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
+    draft_dir = THEME_DRAFTS_DIR / emotion_id / draft_id
+    draft_dir.mkdir(parents=True, exist_ok=False)
+    prompt_path = draft_dir / "prompt.txt"
+    output_path = draft_dir / "theme.json"
+    raw_path = draft_dir / "qwen.raw.json"
+    prompt_path.write_text(prompt.strip() + "\n", encoding="utf-8")
+    run_script(
+        SCRIPTS_DIR / "generate_json_document.py",
+        "--prompt-file", prompt_path,
+        "--output", output_path,
+        "--raw-output", raw_path,
+    )
+    theme = validate_theme(read_json(output_path), emotion_id)
+    output_path.write_text(json.dumps(theme, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"draftId": draft_id, "emotionId": emotion_id, "theme": theme, "prompt": prompt.strip()}
+
+
+def lock_theme(emotion_id: str, theme: object) -> dict:
+    validated = validate_theme(theme, emotion_id)
+    THEMES_DIR.mkdir(parents=True, exist_ok=True)
+    path = theme_path(emotion_id)
+    path.write_text(json.dumps(validated, ensure_ascii=False, indent=2), encoding="utf-8")
+    return {"emotionId": emotion_id, "status": "locked", "theme": validated}
+
+
+def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str]:
+    labels = dict(FEELINGS)
+    grooves = {item["id"]: item for item in read_json(KNOWLEDGE_DIR / "grooves.json")}
+    if emotion_id not in labels or groove_id not in grooves:
+        raise ValueError("无法识别这个心情与律动组合。")
+    source_path = theme_path(emotion_id)
+    if not source_path.is_file():
+        raise ValueError(f"请先生成并锁定“{labels[emotion_id]}”心情主题。")
+    theme = validate_theme(read_json(source_path), emotion_id)
+    groove = grooves[groove_id]
+    instruments = read_json(KNOWLEDGE_DIR / "instruments.json")
+    combination_rules = read_json(KNOWLEDGE_DIR / "combinations.json")
+    override = combination_rules["overrides"][f"{emotion_id}_{groove_id}"]
+    kit_id = f"{emotion_id}_{groove_id}_v01"
+    task = {
+        "kitId": kit_id,
+        "feeling": labels[emotion_id],
+        "groove": groove["label"],
+        "bpm": groove["bpm"],
+        "timeSignature": "4/4",
+        "key": "C major",
+        "bars": 2,
+        "totalBeats": 8,
+        "targetAge": "6-12",
+        "melodyRange": ["C4", "C5"],
+        "model": "qwen3.7-max",
+        "emotionThemeVersion": theme["version"],
+        "coreMotif": theme["coreMotif"],
+        "harmonyPlan": theme["harmonyLanguage"]["primaryPlan"],
+        "grooveTemplate": groove,
+        "instrumentProfile": instruments["version"],
+        "combinationOverride": override,
+    }
+    motif_pitches = [DEGREE_TO_PITCH[value] for value in theme["coreMotif"]["scaleDegrees"]]
+    prompt = f"""你是儿童音乐编曲助手。请根据已经锁定的心情主题母版和律动模板，生成严格两小节的完整音乐骨架JSON。
+
+组合编号：{kit_id}
+心情：{labels[emotion_id]}
+律动：{groove['label']}
+固定速度：{groove['bpm']} BPM；固定4/4拍、C大调、两小节共8拍。
+
+必须继承的心情主题母版：
+{json.dumps(theme, ensure_ascii=False, indent=2)}
+
+必须执行的律动模板：
+{json.dumps(groove, ensure_ascii=False, indent=2)}
+
+必须执行的动物乐器规则：
+{json.dumps(instruments, ensure_ascii=False, indent=2)}
+
+本组合适配规则：
+{json.dumps(override, ensure_ascii=False, indent=2)}
+
+继承要求：
+- melody 中必须按顺序完整出现一次核心动机音高：{', '.join(motif_pitches)}；可以改变八度内位置和每个音的时值，但不能改变音高顺序。
+- chords 必须使用主题母版 harmonyLanguage.primaryPlan 中的4个和弦，并分别从第0、2、4、6拍开始。
+- 键盘、贝斯和鼓必须按照动物乐器规则分别承担和声、低音与节奏职责，并执行律动模板。
+- 小狮子萨克斯与其他乐器使用同一层级的动物乐器规则；在 lionNotes 中写出1—4个具体短回应音符。
+
+只返回JSON对象，顶层字段必须为：kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats、lionNotes。
+示例结构：
+{{
+  "kitId": "{kit_id}",
+  "feeling": "{emotion_id}",
+  "groove": "{groove_id}",
+  "bpm": {groove['bpm']},
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "melody": [{{"pitch":"C4","beat":0,"duration":0.5,"solfege":"do"}}],
+  "chords": [{{"beat":0,"symbol":"C"}}],
+  "bassRoots": [{{"pitch":"C2","beat":0,"duration":1}}],
+  "drumGrid": [{{"instrument":"kick","beat":0,"duration":0.25}}],
+  "lionAllowedBeats": [3.5,7.5],
+  "lionNotes": [{{"pitch":"G4","beat":3.5,"duration":0.25,"velocity":68}}]
+}}
+所有音符结束时间不得超过第8拍；旋律限C4—C5，萨克斯限C4—G5；不要歌词、人声、转调或复杂装饰。
+"""
+    GENERATED_TASKS_DIR.mkdir(parents=True, exist_ok=True)
+    generated_task_path(kit_id).write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
+    return task, prompt
+
+
+def blueprint() -> dict:
+    records = list_records()
+    record_status = {}
+    for record in records:
+        record_status.setdefault(record.get("kitId"), record.get("status"))
+    themes = []
+    for emotion_id, label in FEELINGS:
+        path = theme_path(emotion_id)
+        locked = read_json(path) if path.is_file() else None
+        themes.append({
+            "id": emotion_id,
+            "label": label,
+            "brief": EMOTION_BRIEFS[emotion_id],
+            "status": "locked" if locked else "draft" if latest_theme_draft(emotion_id) else "empty",
+            "theme": locked,
+            "draft": latest_theme_draft(emotion_id),
+            "prompt": theme_generation_prompt(emotion_id),
+            "combinations": [
+                {
+                    "grooveId": groove_id,
+                    "groove": groove_label,
+                    "kitId": f"{emotion_id}_{groove_id}_v01",
+                    "status": record_status.get(f"{emotion_id}_{groove_id}_v01", "ready" if locked else "blocked"),
+                }
+                for groove_id, groove_label in GROOVES
+            ],
+        })
+    return {
+        "project": read_json(KNOWLEDGE_DIR / "project.json"),
+        "grooves": read_json(KNOWLEDGE_DIR / "grooves.json"),
+        "instruments": read_json(KNOWLEDGE_DIR / "instruments.json"),
+        "themes": themes,
+    }
+
 
 def default_tools() -> tuple[Path, Path]:
     local_app_data = Path(os.environ.get("LOCALAPPDATA", ""))
     fluidsynth_setting = os.environ.get("MUSIC_FLUIDSYNTH")
     soundfont_setting = os.environ.get("MUSIC_SOUNDFONT")
-    fluidsynth = Path(fluidsynth_setting) if fluidsynth_setting else local_app_data / "music-audio-tools" / "fluidsynth-v2.5.7" / "fluidsynth-v2.5.7-win10-x64-cpp11" / "bin" / "fluidsynth.exe"
+    tools_root = local_app_data / "music-audio-tools"
+    bundled_fluidsynth = sorted(tools_root.glob("fluidsynth-v*/**/bin/fluidsynth.exe"), reverse=True)
+    fluidsynth = Path(fluidsynth_setting) if fluidsynth_setting else (
+        bundled_fluidsynth[0]
+        if bundled_fluidsynth
+        else tools_root / "fluidsynth-v2.5.7" / "fluidsynth-v2.5.7-win10-x64-cpp11" / "bin" / "fluidsynth.exe"
+    )
     soundfont = Path(soundfont_setting) if soundfont_setting else local_app_data / "music-audio-tools" / "sounds" / "MuseScore_General.sf3"
     return fluidsynth, soundfont
 
@@ -90,11 +382,229 @@ def job_url(job_dir: Path, path: Path) -> str:
     return f"/jobs/{job_dir.name}/{path.relative_to(job_dir).as_posix()}"
 
 
+def record_url(record_dir: Path, path: Path) -> str:
+    return f"/records/{record_dir.name}/{path.relative_to(record_dir).as_posix()}"
+
+
+def production_event(record: dict, event: str, detail: str = "") -> None:
+    record.setdefault("events", []).append({
+        "at": datetime.now().isoformat(timespec="seconds"),
+        "event": event,
+        "detail": detail,
+    })
+
+
+def read_record(record_id: str) -> tuple[Path, dict]:
+    record_dir = (RECORDS_DIR / safe_id(record_id)).resolve()
+    if record_dir.parent != RECORDS_DIR.resolve() or not record_dir.is_dir():
+        raise ValueError("找不到这份音乐生产记录。")
+    record_path = record_dir / "record.json"
+    if not record_path.is_file():
+        raise ValueError("这份音乐生产记录不完整。")
+    return record_dir, json.loads(record_path.read_text(encoding="utf-8"))
+
+
+def save_record(record_dir: Path, record: dict) -> None:
+    (record_dir / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def list_recipes() -> list[dict]:
+    recipes = []
+    for feeling_id, feeling in FEELINGS:
+        for groove_id, groove in GROOVES:
+            kit_id = f"{feeling_id}_{groove_id}_v01"
+            ready = theme_path(feeling_id).is_file()
+            prompt = ""
+            theme_version = None
+            if ready:
+                task, prompt = build_combination_assets(feeling_id, groove_id)
+                theme_version = task["emotionThemeVersion"]
+            recipes.append({
+                "kitId": kit_id,
+                "feeling": feeling,
+                "groove": groove,
+                "feelingId": feeling_id,
+                "grooveId": groove_id,
+                "model": "qwen3.7-max",
+                "ready": ready,
+                "themeVersion": theme_version,
+                "prompt": prompt,
+            })
+    return recipes
+
+
+def create_record(kit_id: str, prompt: str) -> dict:
+    parts = safe_id(kit_id).removesuffix("_v01").split("_", 1)
+    if len(parts) == 2:
+        build_combination_assets(parts[0], parts[1])
+    task_path = task_path_for_kit(kit_id)
+    if not task_path.is_file():
+        raise ValueError("找不到这个心情与律动组合。")
+    if not isinstance(prompt, str) or len(prompt.strip()) < 80:
+        raise ValueError("请先检查并确认完整提示词。")
+    task = json.loads(task_path.read_text(encoding="utf-8"))
+    record_id = f"{task['kitId']}_{datetime.now():%Y%m%d_%H%M%S}_{uuid.uuid4().hex[:6]}"
+    record_dir = RECORDS_DIR / record_id
+    record_dir.mkdir(parents=True, exist_ok=False)
+    (record_dir / "prompt.txt").write_text(prompt.strip() + "\n", encoding="utf-8")
+    record = {
+        "recordId": record_id,
+        "kitId": task["kitId"],
+        "feeling": task["feeling"],
+        "groove": task["groove"],
+        "model": "qwen3.7-max",
+        "status": "prompt_approved",
+        "createdAt": datetime.now().isoformat(timespec="seconds"),
+        "events": [],
+    }
+    production_event(record, "提示词已确认", "等待调用 Qwen3.7-Max 生成 JSON")
+    save_record(record_dir, record)
+    return {**record, "prompt": prompt.strip()}
+
+
+def generate_record_json(record_id: str) -> dict:
+    record_dir, record = read_record(record_id)
+    if record.get("status") not in {"prompt_approved", "generation_failed"}:
+        raise ValueError("请从已确认提示词的记录开始生成 JSON。")
+    task_path = task_path_for_kit(record["kitId"])
+    output_path = record_dir / "generated.json"
+    raw_path = record_dir / "qwen.raw.json"
+    try:
+        run_script(
+            SCRIPTS_DIR / "generate_skeleton_json_mode.py",
+            "--task", task_path,
+            "--prompt-file", record_dir / "prompt.txt",
+            "--output", output_path,
+            "--raw-output", raw_path,
+        )
+        run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path, "--skeleton", output_path)
+    except ValueError as error:
+        record["status"] = "generation_failed"
+        production_event(record, "JSON 生成失败", str(error))
+        save_record(record_dir, record)
+        raise
+    skeleton = json.loads(output_path.read_text(encoding="utf-8"))
+    record["status"] = "json_ready"
+    record["jsonUrl"] = record_url(record_dir, output_path)
+    record["rawUrl"] = record_url(record_dir, raw_path)
+    production_event(record, "JSON 已通过自动检查", "可以生成整段试听")
+    save_record(record_dir, record)
+    return {**record, "skeleton": skeleton}
+
+
+def render_record_preview(record_id: str) -> dict:
+    record_dir, record = read_record(record_id)
+    if record.get("status") not in {"json_ready", "preview_ready"}:
+        raise ValueError("请先生成并通过检查的 JSON。")
+    skeleton_path = record_dir / "generated.json"
+    if not skeleton_path.is_file():
+        raise ValueError("找不到已生成的 JSON。")
+    skeleton = json.loads(skeleton_path.read_text(encoding="utf-8"))
+    fluidsynth, soundfont = default_tools()
+    if not fluidsynth.is_file() or not soundfont.is_file():
+        raise ValueError("找不到音频渲染工具，请联系平台管理员。")
+    task_path = task_path_for_kit(record["kitId"])
+    run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path, "--skeleton", skeleton_path)
+    midi_path = record_dir / "preview.mid"
+    preview_path = record_dir / "preview.wav"
+    run_script(SCRIPTS_DIR / "render_midi.py", "--skeleton", skeleton_path, "--output", midi_path)
+    numerator, denominator = (int(value) for value in str(skeleton["timeSignature"]).split("/", 1))
+    duration_seconds = float(skeleton["bars"]) * (numerator * 4 / denominator) * 60 / float(skeleton["bpm"])
+    run_script(
+        SCRIPTS_DIR / "render_wav.py",
+        "--fluidsynth", fluidsynth,
+        "--soundfont", soundfont,
+        "--midi", midi_path,
+        "--output", preview_path,
+        "--gain", "0.38",
+        "--duration-seconds", str(duration_seconds),
+        "--loop-crossfade-ms", "20",
+    )
+    record["status"] = "preview_ready"
+    record["previewUrl"] = record_url(record_dir, preview_path)
+    production_event(record, "整段试听已生成", "等待人工试听确认")
+    save_record(record_dir, record)
+    return record
+
+
+def approve_record_preview(record_id: str) -> dict:
+    record_dir, record = read_record(record_id)
+    if record.get("status") != "preview_ready":
+        raise ValueError("请先生成整段试听后再确认。")
+    record["status"] = "preview_approved"
+    production_event(record, "试听已人工确认", "可以生成正式分轨")
+    save_record(record_dir, record)
+    return record
+
+
+def create_record_stems(record_id: str) -> dict:
+    record_dir, record = read_record(record_id)
+    if record.get("status") not in {"preview_approved", "stems_ready"}:
+        raise ValueError("请先试听并确认，再生成正式分轨。")
+    skeleton_path = record_dir / "generated.json"
+    if not skeleton_path.is_file():
+        raise ValueError("找不到已确认的 JSON。")
+    job = process_skeleton(json.loads(skeleton_path.read_text(encoding="utf-8")))
+    record["status"] = "stems_ready"
+    record["jobId"] = job["jobId"]
+    production_event(record, "正式分轨已生成", "可进入调音与导出")
+    save_record(record_dir, record)
+    return {"record": record, "job": job}
+
+
+def list_records() -> list[dict]:
+    if not RECORDS_DIR.is_dir():
+        return []
+    records = []
+    for record_path in sorted(RECORDS_DIR.glob("*/record.json"), key=lambda path: path.stat().st_mtime, reverse=True):
+        try:
+            records.append(json.loads(record_path.read_text(encoding="utf-8")))
+        except (OSError, ValueError, json.JSONDecodeError):
+            continue
+    return records[:50]
+
+
+def ensure_lion_stem(job_dir: Path, skeleton: dict) -> None:
+    """为旧版三轨任务补齐小狮子萨克斯，保留其余既有分轨。"""
+    kit_id = safe_id(skeleton.get("kitId"))
+    midi_dir = job_dir / "midi"
+    stems_dir = job_dir / "stems"
+    lion_stem = stems_dir / f"{kit_id}_lion.wav"
+    if lion_stem.is_file():
+        return
+
+    fluidsynth, soundfont = default_tools()
+    if not fluidsynth.is_file() or not soundfont.is_file():
+        raise ValueError("找不到本机 FluidSynth 或 MuseScore General 音色库，无法补生成小狮子分轨。")
+
+    midi_dir.mkdir(parents=True, exist_ok=True)
+    full_midi = midi_dir / f"{kit_id}.mid"
+    run_script(SCRIPTS_DIR / "render_midi.py", "--skeleton", job_dir / "skeleton.json", "--output", full_midi)
+    run_script(
+        SCRIPTS_DIR / "split_midi_stems.py",
+        "--midi", full_midi,
+        "--output-dir", midi_dir,
+        "--prefix", kit_id,
+    )
+    numerator, denominator = (int(value) for value in str(skeleton["timeSignature"]).split("/", 1))
+    duration_seconds = float(skeleton["bars"]) * (numerator * 4 / denominator) * 60 / float(skeleton["bpm"])
+    run_script(
+        SCRIPTS_DIR / "render_wav.py",
+        "--fluidsynth", fluidsynth,
+        "--soundfont", soundfont,
+        "--midi", midi_dir / f"{kit_id}_lion.mid",
+        "--output", lion_stem,
+        "--gain", str(RENDER_GAINS["lion"]),
+        "--duration-seconds", str(duration_seconds),
+        "--loop-crossfade-ms", "20",
+    )
+
+
 def process_skeleton(skeleton: dict) -> dict:
     kit_id = safe_id(skeleton.get("kitId"))
-    task_path = TASKS_DIR / f"{kit_id}.json"
+    task_path = task_path_for_kit(kit_id)
     if not task_path.is_file():
-        raise ValueError(f"找不到编号 {kit_id} 对应的任务卡；第一版目前支持 happy_bounce_v01。")
+        raise ValueError(f"找不到编号 {kit_id} 对应的任务卡；请先在主题工作台完成对应心情母版。")
 
     fluidsynth, soundfont = default_tools()
     if not fluidsynth.is_file() or not soundfont.is_file():
@@ -143,7 +653,6 @@ def process_skeleton(skeleton: dict) -> dict:
         "bearTone": "grand_piano",
         "bearTones": [{"id": tone_id, "label": tone["label"]} for tone_id, tone in BEAR_TONES.items()],
         "pending": [
-            {"animal": "lion", "reason": "需要先确认萨克斯短句音符"},
             {"animal": "rabbit", "reason": "需要制作 do/re/mi 唱名人声"},
         ],
     }
@@ -259,6 +768,7 @@ def list_jobs() -> list[dict]:
             skeleton = json.loads(skeleton_path.read_text(encoding="utf-8"))
             kit_id = safe_id(skeleton.get("kitId"))
             settings = read_settings(job_dir)
+            ensure_lion_stem(job_dir, skeleton)
             stems = []
             for animal in ANIMALS:
                 stem_path = active_stem_path(job_dir, kit_id, animal)
@@ -280,7 +790,6 @@ def list_jobs() -> list[dict]:
                 "bearTones": [{"id": tone_id, "label": tone["label"]} for tone_id, tone in BEAR_TONES.items()],
                 "latestMixUrl": latest_mix,
                 "pending": [
-                    {"animal": "lion", "reason": "需要先确认萨克斯短句音符"},
                     {"animal": "rabbit", "reason": "需要制作 do/re/mi 唱名人声"},
                 ],
             })
@@ -330,8 +839,25 @@ class Handler(BaseHTTPRequestHandler):
             example = AUDIO_DIR / "manifests" / "happy_bounce_v01.bailian_manual_v01.json"
             self.send_json(200, {"skeleton": json.loads(example.read_text(encoding="utf-8"))})
             return
+        if request_path == "/api/recipes":
+            self.send_json(200, {"recipes": list_recipes()})
+            return
+        if request_path == "/api/blueprint":
+            self.send_json(200, blueprint())
+            return
+        if request_path == "/api/records":
+            self.send_json(200, {"records": list_records()})
+            return
         if request_path == "/api/jobs":
             self.send_json(200, {"jobs": list_jobs()})
+            return
+        if request_path.startswith("/records/"):
+            relative = Path(request_path.removeprefix("/records/"))
+            candidate = (RECORDS_DIR / relative).resolve()
+            if RECORDS_DIR.resolve() not in candidate.parents:
+                self.send_error(403)
+                return
+            self.serve_file(candidate)
             return
         if request_path.startswith("/jobs/"):
             relative = Path(request_path.removeprefix("/jobs/"))
@@ -357,6 +883,27 @@ class Handler(BaseHTTPRequestHandler):
                     raise ValueError("JSON 文件最外层必须是一个对象。")
                 self.send_json(200, process_skeleton(skeleton))
                 return
+            if self.path == "/api/records":
+                self.send_json(200, create_record(payload.get("kitId", ""), payload.get("prompt", "")))
+                return
+            if self.path == "/api/themes/generate":
+                self.send_json(200, generate_theme(payload.get("emotionId", ""), payload.get("prompt", "")))
+                return
+            if self.path == "/api/themes/lock":
+                self.send_json(200, lock_theme(payload.get("emotionId", ""), payload.get("theme")))
+                return
+            if self.path == "/api/records/generate":
+                self.send_json(200, generate_record_json(payload.get("recordId", "")))
+                return
+            if self.path == "/api/records/preview":
+                self.send_json(200, render_record_preview(payload.get("recordId", "")))
+                return
+            if self.path == "/api/records/approve":
+                self.send_json(200, approve_record_preview(payload.get("recordId", "")))
+                return
+            if self.path == "/api/records/stems":
+                self.send_json(200, create_record_stems(payload.get("recordId", "")))
+                return
             if self.path == "/api/mix":
                 self.send_json(200, export_mix(payload.get("jobId", ""), payload.get("gains", {})))
                 return
@@ -377,12 +924,14 @@ class Handler(BaseHTTPRequestHandler):
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, default=int(os.environ.get("MUSIC_STUDIO_PORT", "8765")))
+    parser.add_argument("--host", default=os.environ.get("MUSIC_STUDIO_HOST", "127.0.0.1"))
     parser.add_argument("--open", action="store_true", help="启动后自动打开浏览器")
     args = parser.parse_args()
 
     JOBS_DIR.mkdir(parents=True, exist_ok=True)
-    server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
-    studio_url = f"http://127.0.0.1:{args.port}"
+    RECORDS_DIR.mkdir(parents=True, exist_ok=True)
+    server = ThreadingHTTPServer((args.host, args.port), Handler)
+    studio_url = f"http://{args.host}:{args.port}"
     if args.open:
         Timer(0.8, lambda: webbrowser.open(studio_url)).start()
     print(f"音乐分轨平台已启动：{studio_url}")
