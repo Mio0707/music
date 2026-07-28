@@ -111,10 +111,10 @@ def theme_generation_prompt(emotion_id: str) -> str:
 - 心情目标：{EMOTION_BRIEFS[emotion_id]}
 - 核心动机方向：{EMOTION_MOTIF_RULES[emotion_id]}
 - 这份母版之后会被改编成四种不同律动，因此核心身份必须来自音高关系、旋律轮廓、和声语言和收束方式，不能依赖某一种节奏。
-- 母版强制节拍与收束要求：核心动机必须严格为两小节共 8 拍；referenceDurations 总和必须等于 8；最后一个音必须是主音（1 / do），在第 8 拍结束，并使用较长时值形成稳定、明亮、不突兀的收束。
-- 请为这个心情原创一段核心动机：使用 1—7 的音级数字，长度 4—8 个音；referenceDurations 与音级一一对应，所有时值相加必须严格等于 8 拍，最后一个音必须在第 8 拍结束。
+- 母版唯一硬性时间要求：核心动机必须严格覆盖两小节共 8 拍，referenceDurations 总和必须等于 8；结尾音高、音数、长短和收束方式由心情表达决定。
+- 请为这个心情原创一段核心动机：使用 1—7 的音级数字，长度 2—16 个音；referenceDurations 与音级一一对应，所有时值相加必须严格等于 8 拍。
 - 不得复用其他心情已经锁定的核心动机。现有记录：{locked_motif_text}。
-- 和弦只使用 C、Dm、Em、F、G、Am；primaryPlan 必须给出严格两小节可用的 4 个和弦符号。
+- 和弦只使用 C、Dm、Em、F、G、Am；primaryPlan 给出 1—4 个和弦，作为四种律动共同继承的和声身份。
 - 母版要定义共同的力度、触感和乐句呼吸，但不要在这里单独定义任何一种乐器。
 
 只返回JSON对象，不要返回Markdown。必须严格包含以下字段：
@@ -122,11 +122,11 @@ def theme_generation_prompt(emotion_id: str) -> str:
 - label：固定为 "{labels[emotion_id]}"。
 - version：固定为 "{emotion_id}-theme-v1"。
 - designIntent：一句话定义这个心情的音乐身份。
-- coreMotif.scaleDegrees：你原创的4—8个音级整数数组，每个值只能是1—7。
+- coreMotif.scaleDegrees：你原创的2—16个音级整数数组，每个值只能是1—7。
 - coreMotif.referenceDurations：与scaleDegrees等长的正数数组；所有数值相加必须严格等于 8。
 - coreMotif.requiredAppearances：固定为1。
 - melodyGrammar：包含contour、preferredIntervals、phraseEnding、noteDensity。
-- harmonyLanguage：包含primaryPlan、allowedChords、cadence；其中primaryPlan严格为4个和弦。
+- harmonyLanguage：包含primaryPlan、allowedChords、cadence；其中primaryPlan包含1—4个和弦。
 - expression：包含dynamicRange、articulation、phraseBreath。
 
 提示词没有提供任何示例旋律。你必须根据“{labels[emotion_id]}”的目标和核心动机方向自行创作，不能自行套用常见示例数组。
@@ -143,16 +143,12 @@ def validate_theme(theme: object, emotion_id: str) -> dict:
         raise ValueError("心情主题缺少 coreMotif。")
     degrees = motif.get("scaleDegrees")
     durations = motif.get("referenceDurations")
-    if not isinstance(degrees, list) or not 4 <= len(degrees) <= 8 or any(not isinstance(value, int) or not 1 <= value <= 7 for value in degrees):
-        raise ValueError("coreMotif.scaleDegrees 必须包含4—8个1—7音级。")
+    if not isinstance(degrees, list) or not 2 <= len(degrees) <= 16 or any(not isinstance(value, int) or not 1 <= value <= 7 for value in degrees):
+        raise ValueError("coreMotif.scaleDegrees 必须包含2—16个1—7音级。")
     if not isinstance(durations, list) or len(durations) != len(degrees) or any(not isinstance(value, (int, float)) or value <= 0 for value in durations):
         raise ValueError("核心动机的参考时值必须与音级一一对应。")
     if abs(sum(float(value) for value in durations) - 8.0) > 0.001:
         raise ValueError("核心动机的参考时值总和必须严格等于两小节的 8 拍。")
-    if degrees[-1] != 1:
-        raise ValueError("核心动机最后一个音必须是主音 1（do），形成稳定收束。")
-    if float(durations[-1]) < 1.0:
-        raise ValueError("核心动机最后一个主音必须至少保持 1 拍，避免突兀收尾。")
     for other_id, other_label in FEELINGS:
         path = theme_path(other_id)
         if other_id == emotion_id or not path.is_file():
@@ -162,8 +158,8 @@ def validate_theme(theme: object, emotion_id: str) -> dict:
             raise ValueError(f"核心动机与已锁定的“{other_label}”完全相同，请重新生成不同旋律。")
     harmony = theme.get("harmonyLanguage")
     allowed_chords = {"C", "Dm", "Em", "F", "G", "Am"}
-    if not isinstance(harmony, dict) or not isinstance(harmony.get("primaryPlan"), list) or len(harmony["primaryPlan"]) != 4:
-        raise ValueError("harmonyLanguage.primaryPlan 必须包含4个和弦。")
+    if not isinstance(harmony, dict) or not isinstance(harmony.get("primaryPlan"), list) or not 1 <= len(harmony["primaryPlan"]) <= 4:
+        raise ValueError("harmonyLanguage.primaryPlan 必须包含1—4个和弦。")
     if any(chord not in allowed_chords for chord in harmony["primaryPlan"]):
         raise ValueError("主题和弦超出当前C大调儿童音乐方案库。")
     for field in ("melodyGrammar", "expression"):
@@ -259,7 +255,7 @@ def revise_theme(emotion_id: str, theme: object, prompt: str, feedback: str) -> 
     (draft_dir / "feedback.txt").write_text(feedback.strip() + "\n", encoding="utf-8")
     revision_prompt = f"""{prompt.strip()}
 
-现在需要按照用户意见修改已经生成的心情主题母版。只返回完整 JSON 对象，不要输出解释或 Markdown。除非用户明确要求，请保留 emotionId、label、version、核心音乐身份与原提示词的所有格式限制；不要加入具体律动或乐器安排。母版强制节拍与收束要求：coreMotif.referenceDurations 必须与音级一一对应，时值总和严格等于两小节的 8 拍；最后一个音必须是主音（1 / do），在第 8 拍结束，并使用较长时值形成稳定、明亮、不突兀的收束。
+现在需要按照用户意见修改已经生成的心情主题母版。只返回完整 JSON 对象，不要输出解释或 Markdown。除非用户明确要求，请保留 emotionId、label、version 和核心音乐身份；不要加入具体律动或乐器安排。唯一硬性时间要求是 coreMotif.referenceDurations 与音级一一对应，时值总和严格等于两小节的 8 拍。结尾音高、音数、长短和收束方式可按用户意见自由调整。
 
 当前主题 JSON：
 {json.dumps(current_theme, ensure_ascii=False, indent=2)}
@@ -301,6 +297,8 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
     kit_id = f"{emotion_id}_{groove_id}_v01"
     task = {
         "kitId": kit_id,
+        "feelingId": emotion_id,
+        "grooveId": groove_id,
         "feeling": labels[emotion_id],
         "groove": groove["label"],
         "bpm": groove["bpm"],
@@ -329,10 +327,10 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
 必须继承的心情主题母版：
 {json.dumps(theme, ensure_ascii=False, indent=2)}
 
-必须执行的律动模板：
+律动创作方向（用于形成可辨认的不同演绎，不要求逐条机械照搬）：
 {json.dumps(groove, ensure_ascii=False, indent=2)}
 
-必须执行的动物乐器规则：
+动物乐器创作参考（只规定角色和数据接口，不规定固定句型）：
 {json.dumps(instruments, ensure_ascii=False, indent=2)}
 
 本组合适配规则：
@@ -340,10 +338,10 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
 
 继承要求：
 - melody 中必须按顺序完整出现一次核心动机音高：{', '.join(motif_pitches)}；可以改变八度内位置和每个音的时值，但不能改变音高顺序。
-- chords 必须使用主题母版 harmonyLanguage.primaryPlan 中的4个和弦，并分别从第0、2、4、6拍开始。
-- 律动模板中的 identity、melodyRhythm、drumRule、bassRule、keyboardRule 都是强制执行规则。不同律动不能只改 BPM：必须明显改变旋律时值与留白、鼓点拍位、贝斯时值与进入位置，以及萨克斯的进入空隙。
-- 这是纯编曲，不依赖视觉角色。四件乐器用错位的音区、强弱与留白形成短暂突出：键盘在开头清楚领奏核心动机；贝斯在旋律停顿处安排一次有方向的短句；鼓组在乐句交接处安排一次短鼓花；萨克斯在主旋律空隙写一小句回应。不要让所有乐器持续叠在同一拍。
-- 小狮子萨克斯与其他乐器使用同一层级的动物乐器规则；在 lionNotes 中写出4—6个具体音符，组成一句回应；其进入拍点必须服从当前律动，不得沿用其他律动的固定位置。
+- chords 必须使用主题母版 harmonyLanguage.primaryPlan 中的全部和弦并保持顺序；第一个和弦从第0拍开始，其余换和弦拍点可在8拍内自由安排且严格递增。
+- 律动模板描述的是听感方向。四种律动必须听起来是同一母版的不同演绎，不能只改 BPM；模型可自由决定旋律时值、留白、鼓点、贝斯、键盘和萨克斯的具体写法。
+- 四件乐器都必须提供可渲染的数据，但不规定固定音数、固定拍点、固定句长、固定轮流方式或固定演奏法。
+- lionAllowedBeats 只为兼容旧数据保留，可以为空；lionNotes 直接写出萨克斯音高、拍点、时值和力度即可。
 
 只返回JSON对象，顶层字段必须为：kitId、feeling、groove、bpm、timeSignature、key、bars、melody、chords、bassRoots、drumGrid、lionAllowedBeats、lionNotes。
 示例结构：
@@ -359,10 +357,10 @@ def build_combination_assets(emotion_id: str, groove_id: str) -> tuple[dict, str
   "chords": [{{"beat":0,"symbol":"C"}}],
   "bassRoots": [{{"pitch":"C2","beat":0,"duration":1}}],
   "drumGrid": [{{"instrument":"kick","beat":0,"duration":0.25}}],
-  "lionAllowedBeats": [2.5,3,3.5,6,6.5,7],
-  "lionNotes": [{{"pitch":"E5","beat":2.5,"duration":0.5,"velocity":88}}, {{"pitch":"G5","beat":3,"duration":0.5,"velocity":90}}, {{"pitch":"E5","beat":3.5,"duration":0.5,"velocity":86}}, {{"pitch":"C5","beat":6,"duration":0.5,"velocity":88}}]
+  "lionAllowedBeats": [],
+  "lionNotes": [{{"pitch":"E5","beat":2.5,"duration":1,"velocity":84}}]
 }}
-所有音符结束时间不得超过第8拍；melody 必须从第0拍开始，最后一个旋律音必须在第8拍结束，完整占满两小节；旋律限C4—C5，萨克斯限C4—G5；不要歌词、人声、转调或复杂装饰。
+技术安全线：所有音符开始拍不得小于0，时值必须大于0，结束时间不得超过第8拍；melody 必须从第0拍开始并恰好在第8拍结束；旋律限C4—C5，萨克斯限C4—G5；力度使用1—127。不要歌词、人声或临时变速。
 """
     GENERATED_TASKS_DIR.mkdir(parents=True, exist_ok=True)
     generated_task_path(kit_id).write_text(json.dumps(task, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -597,10 +595,10 @@ def revise_record_json(record_id: str, feedback: str) -> dict:
 
 现在需要在不改变任务身份的前提下修改一份已经生成的音乐 JSON。
 必须只返回完整 JSON 对象，字段、数据结构和音符格式必须与当前 JSON 保持兼容；不要输出解释或 Markdown。
-保留心情母版的核心动机、歌曲的 kitId、feeling、groove、拍号、小节数和基本段落结构，除非用户明确要求修改。
-修改后仍须符合原提示词中的所有乐器、音域、节拍和主题继承规则。
+保留心情母版的核心动机与和弦顺序，以及歌曲的 kitId、feeling、groove、速度、拍号和小节数。
+原提示词中如果存在固定音数、固定拍点、固定句长、固定间隔、固定和弦换拍、固定留白或固定演奏法，这些旧创作约束全部作废，以下面的新版规则为准。
 歌曲必须严格两小节共 8 拍：melody 从第 0 拍开始，最后一个旋律音必须在第 8 拍结束，不能提前结束或超出。
-新版乐队规则：这是纯编曲，不依赖视觉角色。四件乐器用错位的音区、强弱与留白形成短暂突出：键盘领奏核心动机；贝斯在旋律停顿处安排一次有方向的短句；鼓组在乐句交接处安排一次短鼓花；萨克斯在主旋律空隙写4—6个音组成的一小句回应。不要让所有乐器持续叠在同一拍。
+新版规则只保留母版继承与技术安全线：主旋律必须包含母版核心动机；和弦必须完整继承母版和弦并保持顺序，但换和弦拍点可自由安排；所有音乐严格两小节共8拍，事件不得越界；四件乐器都提供可渲染数据。律动模板和动物角色只作为创作方向，不规定固定音数、拍点、句长、留白、轮流方式或演奏法。lionAllowedBeats 仅兼容旧数据，可以为空。用户提出修改意见时，可以自由重写旋律节奏、和弦换拍、贝斯、鼓和萨克斯，只要继续保持同一母版身份和当前律动方向。
 
 当前 JSON：
 {json.dumps(current_skeleton, ensure_ascii=False, indent=2)}

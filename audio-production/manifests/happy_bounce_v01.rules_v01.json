@@ -38,11 +38,12 @@
     { "instrument": "kick", "beat": 6, "duration": 0.25 },
     { "instrument": "snare", "beat": 7, "duration": 0.25 }
   ],
-  "lionAllowedBeats": [2.5, 3, 3.5, 6, 6.5, 7],
+  "lionAllowedBeats": [2.5, 6],
   "lionNotes": [
-    { "pitch": "E5", "beat": 2.5, "duration": 0.5, "velocity": 88 },
-    { "pitch": "G5", "beat": 3, "duration": 0.5, "velocity": 92 },
-    { "pitch": "E5", "beat": 3.5, "duration": 0.5, "velocity": 86 },
-    { "pitch": "C5", "beat": 6, "duration": 0.5, "velocity": 88 }
+    { "pitch": "E5", "beat": 2.5, "duration": 0.5, "velocity": 86 },
+    { "pitch": "F5", "beat": 3, "duration": 0.5, "velocity": 88 },
+    { "pitch": "G5", "beat": 3.5, "duration": 0.75, "velocity": 90 },
+    { "pitch": "E5", "beat": 4.25, "duration": 0.5, "velocity": 86 },
+    { "pitch": "C5", "beat": 4.75, "duration": 0.75, "velocity": 82 }
   ]
 }

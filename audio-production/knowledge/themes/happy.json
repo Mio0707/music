@@ -1,0 +1,62 @@
+{
+  "emotionId": "happy",
+  "label": "开心",
+  "version": "happy-theme-v1",
+  "designIntent": "以明亮上行的跳进与级进交织，像一步步跳向阳光，最终稳稳落在主音上，传递自然、亲切的快乐。",
+  "coreMotif": {
+    "scaleDegrees": [
+      1,
+      3,
+      5,
+      6,
+      5,
+      3,
+      2,
+      1
+    ],
+    "referenceDurations": [
+      0.5,
+      0.5,
+      1,
+      1,
+      1,
+      1,
+      1,
+      2
+    ],
+    "requiredAppearances": 1
+  },
+  "melodyGrammar": {
+    "contour": "ascending-arch",
+    "preferredIntervals": [
+      "major-third",
+      "perfect-fourth",
+      "major-second",
+      "minor-third"
+    ],
+    "phraseEnding": "stepwise-descent-to-tonic",
+    "noteDensity": "moderate"
+  },
+  "harmonyLanguage": {
+    "primaryPlan": [
+      "C",
+      "F",
+      "G",
+      "C"
+    ],
+    "allowedChords": [
+      "C",
+      "Dm",
+      "Em",
+      "F",
+      "G",
+      "Am"
+    ],
+    "cadence": "authentic"
+  },
+  "expression": {
+    "dynamicRange": "mp-to-mf",
+    "articulation": "light-staccato-with-legato-landing",
+    "phraseBreath": "single-breath-two-bar-phrase"
+  }
+}
