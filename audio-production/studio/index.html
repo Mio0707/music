@@ -45,10 +45,10 @@
         </aside>
 
         <div class="theme-editor">
-          <div class="editor-heading"><div><span class="editor-label">AI 任务说明</span><h3>审核心情母版提示词</h3></div><button class="button primary" id="generate-theme-button" type="button">AI 生成主题 JSON</button></div>
+          <div class="editor-heading"><div><span class="editor-label">AI 任务说明</span><h3>审核心情母版提示词</h3></div><button class="button primary" id="generate-theme-button" type="button">用当前提示词生成 JSON</button></div>
           <textarea id="theme-prompt-editor" rows="12" aria-label="心情主题提示词"></textarea>
             <div class="theme-json-wrap is-hidden" id="theme-json-wrap">
-              <div class="editor-heading compact-heading"><div><span class="editor-label">生成结果</span><h3>检查并锁定主题母版</h3></div><button class="button dark" id="lock-theme-button" type="button">锁定为心情母版</button></div>
+              <div class="editor-heading compact-heading"><div><span class="editor-label">生成结果</span><h3>检查并锁定主题母版</h3><span class="json-freshness" id="theme-json-freshness" aria-live="polite"></span></div><button class="button dark" id="lock-theme-button" type="button">锁定为心情母版</button></div>
               <textarea id="theme-json-editor" class="code-editor" rows="16" spellcheck="false" aria-label="心情主题JSON"></textarea>
               <div class="theme-preview-actions"><button class="button secondary compact" id="theme-preview-button" type="button">生成母版试听</button><span>固定钢琴与中性节拍，只用于确认旋律和和声气质。</span></div>
               <div class="preview-box is-hidden" id="theme-preview-box"><audio id="theme-preview-audio" controls preload="none"></audio></div>
@@ -84,7 +84,7 @@
           </article>
           <article class="production-step">
             <div class="mini-number">2</div>
-            <div class="production-content"><div class="production-heading"><div><h3>生成完整音乐 JSON</h3><p>AI 写出主旋律、键盘、贝斯、鼓和小狮子萨克斯的具体音符与节奏。</p></div><button class="button primary compact" id="generate-json-button" type="button" disabled>生成 JSON</button></div><pre class="json-preview is-hidden" id="json-preview"></pre></div>
+            <div class="production-content"><div class="production-heading"><div><h3>生成并编辑完整音乐 JSON</h3><p>AI 生成初稿后可直接修改；保存时会重新检查音乐规则。</p></div><button class="button primary compact" id="generate-json-button" type="button" disabled>生成 JSON</button></div><div class="json-editor-wrap is-hidden" id="json-editor-wrap"><div class="json-editor-toolbar"><span class="json-edit-status is-saved" id="json-edit-status">已通过检查</span><div class="json-editor-actions"><button class="button secondary compact" id="format-json-button" type="button">整理格式</button><button class="button secondary compact" id="restore-json-button" type="button" disabled>恢复上次保存</button><button class="button primary compact" id="save-json-button" type="button" disabled>检查并保存</button></div></div><textarea class="code-editor combination-json-editor" id="json-editor" rows="22" spellcheck="false" aria-label="可编辑的完整音乐 JSON"></textarea></div></div>
           </article>
           <article class="production-step">
             <div class="mini-number">3</div>
@@ -116,8 +116,10 @@
       <div class="section-heading mixer-heading"><div class="step-mark">调</div><div><p class="section-kicker">最后调整</p><h2 id="mixer-title">动物小乐队分轨</h2><p id="kit-summary">各轨道会从同一拍同时开始</p></div><div class="transport"><button class="round-button play" id="play-button" type="button" aria-label="播放">▶</button><button class="round-button" id="stop-button" type="button" aria-label="停止">■</button><span id="transport-label">准备播放</span></div></div>
       <div class="tracks" id="tracks"></div>
       <div class="pending-box"><strong>待补素材</strong><span>小兔唱名人声将在专属素材完成后接入</span></div>
-      <div class="export-row"><p>音量调整只改变混音，不会改写已经确认的音乐JSON。</p><button class="button primary" id="export-button" type="button">导出当前混音</button></div>
+      <div class="status" id="mixer-status" role="status" aria-live="polite">试听并调整各分轨音量，确认后保存到前端。</div>
+      <div class="export-row"><p>试听确认后，可将四条分轨按当前音量保存到前端资源库；静音和独奏状态不会写入正式资源。</p><div class="export-actions"><button class="button secondary" id="export-button" type="button">导出当前混音</button><button class="button primary" id="publish-button" type="button">保存正式分轨到前端</button></div></div>
       <div class="download-box is-hidden" id="download-box"><span>混音已生成</span><a class="button secondary" id="download-link" download>下载 WAV</a></div>
+      <div class="download-box publish-box is-hidden" id="publish-box"><span id="publish-result">正式分轨已保存到前端</span><a class="button secondary" id="manifest-link" target="_blank" rel="noopener">查看说明文件</a></div>
     </section>
   </main>
   <script src="app.js"></script>

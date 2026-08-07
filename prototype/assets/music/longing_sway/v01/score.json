@@ -1,0 +1,281 @@
+{
+  "kitId": "longing_sway_v01",
+  "feeling": "longing",
+  "groove": "sway",
+  "bpm": 84,
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "melody": [
+    {
+      "pitch": "E4",
+      "beat": 0,
+      "duration": 1,
+      "solfege": "mi"
+    },
+    {
+      "pitch": "G4",
+      "beat": 1,
+      "duration": 1,
+      "solfege": "sol"
+    },
+    {
+      "pitch": "A4",
+      "beat": 2,
+      "duration": 1.333,
+      "solfege": "la"
+    },
+    {
+      "pitch": "G4",
+      "beat": 3.333,
+      "duration": 0.667,
+      "solfege": "sol"
+    },
+    {
+      "pitch": "E4",
+      "beat": 4,
+      "duration": 1.333,
+      "solfege": "mi"
+    },
+    {
+      "pitch": "D4",
+      "beat": 5.333,
+      "duration": 1.334,
+      "solfege": "re"
+    },
+    {
+      "pitch": "E4",
+      "beat": 6.667,
+      "duration": 1.333,
+      "solfege": "mi"
+    }
+  ],
+  "chords": [
+    {
+      "beat": 0,
+      "symbol": "F"
+    },
+    {
+      "beat": 2,
+      "symbol": "Am"
+    },
+    {
+      "beat": 4,
+      "symbol": "G"
+    },
+    {
+      "beat": 6,
+      "symbol": "C"
+    }
+  ],
+  "bassRoots": [
+    {
+      "pitch": "F2",
+      "beat": 0,
+      "duration": 1.667
+    },
+    {
+      "pitch": "C3",
+      "beat": 1.667,
+      "duration": 0.333
+    },
+    {
+      "pitch": "A2",
+      "beat": 2,
+      "duration": 1.667
+    },
+    {
+      "pitch": "E2",
+      "beat": 3.667,
+      "duration": 0.333
+    },
+    {
+      "pitch": "G2",
+      "beat": 4,
+      "duration": 1.667
+    },
+    {
+      "pitch": "D2",
+      "beat": 5.667,
+      "duration": 0.333
+    },
+    {
+      "pitch": "C2",
+      "beat": 6,
+      "duration": 2
+    }
+  ],
+  "drumGrid": [
+    {
+      "instrument": "kick",
+      "beat": 0,
+      "duration": 0.333,
+      "velocity": 68
+    },
+    {
+      "instrument": "kick",
+      "beat": 2,
+      "duration": 0.333,
+      "velocity": 64
+    },
+    {
+      "instrument": "kick",
+      "beat": 4,
+      "duration": 0.333,
+      "velocity": 62
+    },
+    {
+      "instrument": "kick",
+      "beat": 6,
+      "duration": 0.333,
+      "velocity": 58
+    },
+    {
+      "instrument": "snare",
+      "beat": 1,
+      "duration": 0.333,
+      "velocity": 54
+    },
+    {
+      "instrument": "snare",
+      "beat": 3,
+      "duration": 0.333,
+      "velocity": 50
+    },
+    {
+      "instrument": "snare",
+      "beat": 5,
+      "duration": 0.333,
+      "velocity": 48
+    },
+    {
+      "instrument": "snare",
+      "beat": 7,
+      "duration": 0.333,
+      "velocity": 44
+    },
+    {
+      "instrument": "hihat",
+      "beat": 0,
+      "duration": 0.333,
+      "velocity": 48
+    },
+    {
+      "instrument": "hihat",
+      "beat": 0.667,
+      "duration": 0.333,
+      "velocity": 36
+    },
+    {
+      "instrument": "hihat",
+      "beat": 1,
+      "duration": 0.333,
+      "velocity": 46
+    },
+    {
+      "instrument": "hihat",
+      "beat": 1.667,
+      "duration": 0.333,
+      "velocity": 34
+    },
+    {
+      "instrument": "hihat",
+      "beat": 2,
+      "duration": 0.333,
+      "velocity": 44
+    },
+    {
+      "instrument": "hihat",
+      "beat": 2.667,
+      "duration": 0.333,
+      "velocity": 32
+    },
+    {
+      "instrument": "hihat",
+      "beat": 3,
+      "duration": 0.333,
+      "velocity": 42
+    },
+    {
+      "instrument": "hihat",
+      "beat": 3.667,
+      "duration": 0.333,
+      "velocity": 30
+    },
+    {
+      "instrument": "hihat",
+      "beat": 4,
+      "duration": 0.333,
+      "velocity": 40
+    },
+    {
+      "instrument": "hihat",
+      "beat": 4.667,
+      "duration": 0.333,
+      "velocity": 28
+    },
+    {
+      "instrument": "hihat",
+      "beat": 5,
+      "duration": 0.333,
+      "velocity": 38
+    },
+    {
+      "instrument": "hihat",
+      "beat": 5.667,
+      "duration": 0.333,
+      "velocity": 26
+    },
+    {
+      "instrument": "hihat",
+      "beat": 6,
+      "duration": 0.333,
+      "velocity": 36
+    },
+    {
+      "instrument": "hihat",
+      "beat": 6.667,
+      "duration": 0.333,
+      "velocity": 24
+    },
+    {
+      "instrument": "hihat",
+      "beat": 7,
+      "duration": 0.333,
+      "velocity": 34
+    },
+    {
+      "instrument": "hihat",
+      "beat": 7.667,
+      "duration": 0.333,
+      "velocity": 22
+    }
+  ],
+  "lionAllowedBeats": [],
+  "lionNotes": [
+    {
+      "pitch": "A3",
+      "beat": 0,
+      "duration": 2,
+      "velocity": 48
+    },
+    {
+      "pitch": "C4",
+      "beat": 2,
+      "duration": 2,
+      "velocity": 46
+    },
+    {
+      "pitch": "B3",
+      "beat": 4,
+      "duration": 2,
+      "velocity": 44
+    },
+    {
+      "pitch": "G4",
+      "beat": 6,
+      "duration": 2,
+      "velocity": 40
+    }
+  ]
+}

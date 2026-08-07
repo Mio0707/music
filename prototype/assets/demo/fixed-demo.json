@@ -1,0 +1,39 @@
+{
+  "schemaVersion": "1.0.0",
+  "mode": "fixed-demo",
+  "description": "固定演示包：卡门用于手势演示，东方红用于唱名演示。所有路径均相对于 prototype/。",
+  "gestureLesson": {
+    "id": "carmen-overture-demo",
+    "title": "《卡门》序曲",
+    "audio": "assets/music/carmen/source.mp3",
+    "plan": "assets/music/carmen/gesture-plan.json",
+    "meter": "3/4",
+    "bpm": 123,
+    "lessonEndSec": 130.44
+  },
+  "solfegeLesson": {
+    "id": "dongfanghong-solfege-demo",
+    "title": "《东方红》",
+    "score": "assets/demo/dongfanghong.json",
+    "tonic": "F",
+    "meter": "2/4",
+    "bpm": 64,
+    "measuresPerPage": 4,
+    "voiceRoot": "assets/solfege/voice-katy-child-clean-v2"
+  },
+  "piano": {
+    "engine": "browser-web-audio",
+    "waveforms": ["triangle", "sine"],
+    "supportsOctaves": [-1, 0, 1],
+    "fallback": "always-available"
+  },
+  "rendering": {
+    "scorePreview": "jianpu",
+    "measuresPerRow": 4,
+    "highOctave": "dot-above",
+    "lowOctave": "dot-below",
+    "halfBeat": "underline-once",
+    "quarterBeat": "underline-twice",
+    "longNotes": "dash-to-right"
+  }
+}

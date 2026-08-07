@@ -1,0 +1,256 @@
+{
+  "kitId": "calm_steady_v01",
+  "feeling": "calm",
+  "groove": "steady",
+  "bpm": 88,
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "melody": [
+    {
+      "pitch": "E4",
+      "beat": 0,
+      "duration": 1.5,
+      "solfege": "mi"
+    },
+    {
+      "pitch": "D4",
+      "beat": 1.5,
+      "duration": 0.5,
+      "solfege": "re"
+    },
+    {
+      "pitch": "C4",
+      "beat": 2,
+      "duration": 1,
+      "solfege": "do"
+    },
+    {
+      "pitch": "D4",
+      "beat": 3,
+      "duration": 1,
+      "solfege": "re"
+    },
+    {
+      "pitch": "F4",
+      "beat": 4,
+      "duration": 1,
+      "solfege": "fa"
+    },
+    {
+      "pitch": "E4",
+      "beat": 5,
+      "duration": 1,
+      "solfege": "mi"
+    },
+    {
+      "pitch": "D4",
+      "beat": 6,
+      "duration": 1,
+      "solfege": "re"
+    },
+    {
+      "pitch": "C4",
+      "beat": 7,
+      "duration": 1,
+      "solfege": "do"
+    }
+  ],
+  "chords": [
+    {
+      "beat": 0,
+      "symbol": "C"
+    },
+    {
+      "beat": 2,
+      "symbol": "Dm"
+    },
+    {
+      "beat": 5,
+      "symbol": "C"
+    }
+  ],
+  "bassRoots": [
+    {
+      "pitch": "C2",
+      "beat": 0,
+      "duration": 2
+    },
+    {
+      "pitch": "D2",
+      "beat": 2,
+      "duration": 2
+    },
+    {
+      "pitch": "A2",
+      "beat": 4,
+      "duration": 1
+    },
+    {
+      "pitch": "C2",
+      "beat": 5,
+      "duration": 3
+    }
+  ],
+  "drumGrid": [
+    {
+      "instrument": "kick",
+      "beat": 0,
+      "duration": 0.5,
+      "velocity": 60
+    },
+    {
+      "instrument": "kick",
+      "beat": 2,
+      "duration": 0.5,
+      "velocity": 55
+    },
+    {
+      "instrument": "kick",
+      "beat": 4,
+      "duration": 0.5,
+      "velocity": 60
+    },
+    {
+      "instrument": "kick",
+      "beat": 6,
+      "duration": 0.5,
+      "velocity": 55
+    },
+    {
+      "instrument": "snare",
+      "beat": 1,
+      "duration": 0.5,
+      "velocity": 50
+    },
+    {
+      "instrument": "snare",
+      "beat": 3,
+      "duration": 0.5,
+      "velocity": 45
+    },
+    {
+      "instrument": "snare",
+      "beat": 5,
+      "duration": 0.5,
+      "velocity": 50
+    },
+    {
+      "instrument": "snare",
+      "beat": 7,
+      "duration": 0.5,
+      "velocity": 45
+    },
+    {
+      "instrument": "hihat",
+      "beat": 0,
+      "duration": 0.5,
+      "velocity": 40
+    },
+    {
+      "instrument": "hihat",
+      "beat": 1,
+      "duration": 0.5,
+      "velocity": 35
+    },
+    {
+      "instrument": "hihat",
+      "beat": 2,
+      "duration": 0.5,
+      "velocity": 40
+    },
+    {
+      "instrument": "hihat",
+      "beat": 3,
+      "duration": 0.5,
+      "velocity": 35
+    },
+    {
+      "instrument": "hihat",
+      "beat": 4,
+      "duration": 0.5,
+      "velocity": 40
+    },
+    {
+      "instrument": "hihat",
+      "beat": 5,
+      "duration": 0.5,
+      "velocity": 35
+    },
+    {
+      "instrument": "hihat",
+      "beat": 6,
+      "duration": 0.5,
+      "velocity": 40
+    },
+    {
+      "instrument": "hihat",
+      "beat": 7,
+      "duration": 0.5,
+      "velocity": 35
+    },
+    {
+      "instrument": "hihat",
+      "beat": 0.5,
+      "duration": 0.5,
+      "velocity": 32
+    },
+    {
+      "instrument": "hihat",
+      "beat": 1.5,
+      "duration": 0.5,
+      "velocity": 28
+    },
+    {
+      "instrument": "hihat",
+      "beat": 2.5,
+      "duration": 0.5,
+      "velocity": 32
+    },
+    {
+      "instrument": "hihat",
+      "beat": 3.5,
+      "duration": 0.5,
+      "velocity": 28
+    },
+    {
+      "instrument": "hihat",
+      "beat": 4.5,
+      "duration": 0.5,
+      "velocity": 32
+    },
+    {
+      "instrument": "hihat",
+      "beat": 5.5,
+      "duration": 0.5,
+      "velocity": 28
+    },
+    {
+      "instrument": "hihat",
+      "beat": 6.5,
+      "duration": 0.5,
+      "velocity": 32
+    },
+    {
+      "instrument": "hihat",
+      "beat": 7.5,
+      "duration": 0.5,
+      "velocity": 28
+    }
+  ],
+  "lionAllowedBeats": [],
+  "lionNotes": [
+    {
+      "pitch": "G4",
+      "beat": 0,
+      "duration": 2,
+      "velocity": 45
+    },
+    {
+      "pitch": "G4",
+      "beat": 5,
+      "duration": 2,
+      "velocity": 40
+    }
+  ]
+}

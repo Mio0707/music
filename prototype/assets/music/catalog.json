@@ -1,0 +1,166 @@
+{
+  "packs": {
+    "calm_sway": {
+      "packId": "calm_sway",
+      "feeling": "calm",
+      "groove": "sway",
+      "latestVersion": "v01",
+      "manifest": "calm_sway/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "calm_steady": {
+      "packId": "calm_steady",
+      "feeling": "calm",
+      "groove": "steady",
+      "latestVersion": "v01",
+      "manifest": "calm_steady/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "happy_sway": {
+      "packId": "happy_sway",
+      "feeling": "happy",
+      "groove": "sway",
+      "latestVersion": "v01",
+      "manifest": "happy_sway/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "longing_steady": {
+      "packId": "longing_steady",
+      "feeling": "longing",
+      "groove": "steady",
+      "latestVersion": "v01",
+      "manifest": "longing_steady/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "brave_sway": {
+      "packId": "brave_sway",
+      "feeling": "brave",
+      "groove": "sway",
+      "latestVersion": "v01",
+      "manifest": "brave_sway/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "happy_forward": {
+      "packId": "happy_forward",
+      "feeling": "happy",
+      "groove": "forward",
+      "latestVersion": "v01",
+      "manifest": "happy_forward/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "calm_bounce": {
+      "packId": "calm_bounce",
+      "feeling": "calm",
+      "groove": "bounce",
+      "latestVersion": "v01",
+      "manifest": "calm_bounce/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "longing_sway": {
+      "packId": "longing_sway",
+      "feeling": "longing",
+      "groove": "sway",
+      "latestVersion": "v01",
+      "manifest": "longing_sway/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "longing_forward": {
+      "packId": "longing_forward",
+      "feeling": "longing",
+      "groove": "forward",
+      "latestVersion": "v01",
+      "manifest": "longing_forward/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "longing_bounce": {
+      "packId": "longing_bounce",
+      "feeling": "longing",
+      "groove": "bounce",
+      "latestVersion": "v01",
+      "manifest": "longing_bounce/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "calm_forward": {
+      "packId": "calm_forward",
+      "feeling": "calm",
+      "groove": "forward",
+      "latestVersion": "v01",
+      "manifest": "calm_forward/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "brave_forward": {
+      "packId": "brave_forward",
+      "feeling": "brave",
+      "groove": "forward",
+      "latestVersion": "v01",
+      "manifest": "brave_forward/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "brave_bounce": {
+      "packId": "brave_bounce",
+      "feeling": "brave",
+      "groove": "bounce",
+      "latestVersion": "v01",
+      "manifest": "brave_bounce/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "brave_steady": {
+      "packId": "brave_steady",
+      "feeling": "brave",
+      "groove": "steady",
+      "latestVersion": "v01",
+      "manifest": "brave_steady/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "happy_steady": {
+      "packId": "happy_steady",
+      "feeling": "happy",
+      "groove": "steady",
+      "latestVersion": "v01",
+      "manifest": "happy_steady/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    },
+    "happy_bounce": {
+      "packId": "happy_bounce",
+      "feeling": "happy",
+      "groove": "bounce",
+      "latestVersion": "v01",
+      "manifest": "happy_bounce/v01/manifest.json",
+      "versions": [
+        "v01"
+      ]
+    }
+  },
+  "schemaVersion": 1,
+  "updatedAt": "2026-08-04T16:15:36"
+}

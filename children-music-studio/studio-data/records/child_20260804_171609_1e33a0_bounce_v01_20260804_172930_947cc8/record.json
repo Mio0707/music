@@ -1,0 +1,36 @@
+{
+  "recordId": "child_20260804_171609_1e33a0_bounce_v01_20260804_172930_947cc8",
+  "kitId": "child_20260804_171609_1e33a0_bounce_v01",
+  "feeling": "放学蹦蹦跳",
+  "groove": "蹦蹦跳跳",
+  "model": "qwen3.7-max",
+  "status": "preview_ready",
+  "createdAt": "2026-08-04T17:29:30",
+  "events": [
+    {
+      "at": "2026-08-04T17:29:30",
+      "event": "提示词已确认",
+      "detail": "等待调用 Qwen3.7-Max 生成 JSON"
+    },
+    {
+      "at": "2026-08-04T17:32:53",
+      "event": "JSON 自动修改后通过检查",
+      "detail": "第 1 次修改通过；原错误：检查未通过：\n- 第 1 个萨克斯长音 E5 在 G 和弦上持续较久但不是和弦音；请优先缩短到1.5拍以下或移动后续换和弦拍点，不得替换母版和弦。"
+    },
+    {
+      "at": "2026-08-04T17:32:53",
+      "event": "JSON 已通过自动检查",
+      "detail": "可以生成整段试听"
+    },
+    {
+      "at": "2026-08-04T17:35:07",
+      "event": "整段试听已生成",
+      "detail": "等待人工试听确认"
+    }
+  ],
+  "jsonUrl": "/records/child_20260804_171609_1e33a0_bounce_v01_20260804_172930_947cc8/generated.json",
+  "rawUrl": "/records/child_20260804_171609_1e33a0_bounce_v01_20260804_172930_947cc8/qwen.raw.json",
+  "lastAutoRepairAttempts": 1,
+  "autoRepairCount": 1,
+  "previewUrl": "/records/child_20260804_171609_1e33a0_bounce_v01_20260804_172930_947cc8/preview.wav"
+}

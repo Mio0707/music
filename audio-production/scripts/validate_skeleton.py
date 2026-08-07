@@ -16,6 +16,15 @@ DEGREE_TO_LETTER = {1: "C", 2: "D", 3: "E", 4: "F", 5: "G", 6: "A", 7: "B"}
 SEMITONES = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 SUPPORTED_CHORDS = {"C", "Dm", "Em", "F", "G", "Am"}
 SUPPORTED_DRUMS = {"kick", "snare", "hihat"}
+CHORD_TONES = {
+    "C": {"C", "E", "G"}, "Dm": {"D", "F", "A"}, "Em": {"E", "G", "B"},
+    "F": {"F", "A", "C"}, "G": {"G", "B", "D"}, "Am": {"A", "C", "E"},
+}
+CHORD_ROOT_FIFTH = {
+    "C": {"C", "G"}, "Dm": {"D", "A"}, "Em": {"E", "B"},
+    "F": {"F", "C"}, "G": {"G", "D"}, "Am": {"A", "E"},
+}
+TIMING_TOLERANCE = 0.02
 
 
 def fail(errors: list[str], message: str) -> None:
@@ -31,6 +40,55 @@ def midi_number(pitch: object) -> int | None:
     letter, accidental, octave_text = match.groups()
     value = 12 * (int(octave_text) + 1) + SEMITONES[letter] + {"": 0, "#": 1, "b": -1}[accidental]
     return value if 0 <= value <= 127 else None
+
+
+def parsed_note(note: object) -> tuple[float, float, str, int] | None:
+    if not isinstance(note, dict):
+        return None
+    try:
+        beat = float(note["beat"])
+        duration = float(note["duration"])
+        pitch = str(note["pitch"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    match = PITCH_RE.match(pitch)
+    midi = midi_number(pitch)
+    if not match or midi is None or not math.isfinite(beat) or not math.isfinite(duration):
+        return None
+    return beat, duration, match.group(1), midi
+
+
+def is_integer_beat(beat: float) -> bool:
+    return abs(beat - round(beat)) <= TIMING_TOLERANCE
+
+
+def is_triplet_offbeat(beat: float) -> bool:
+    fraction = beat - math.floor(beat)
+    return abs(fraction - 0.333) <= TIMING_TOLERANCE or abs(fraction - 0.667) <= TIMING_TOLERANCE
+
+
+def active_chord(chord_timeline: list[tuple[float, str]], beat: float) -> str | None:
+    current = None
+    for chord_beat, symbol in chord_timeline:
+        if chord_beat <= beat + TIMING_TOLERANCE:
+            current = symbol
+        else:
+            break
+    return current
+
+
+def matches_timing_grid(value: float, groove_id: str) -> bool:
+    fraction = value - math.floor(value)
+    allowed = (0.0, 1 / 3, 2 / 3, 1.0) if groove_id == "sway" else (0.0, 0.25, 0.5, 0.75, 1.0)
+    return min(abs(fraction - candidate) for candidate in allowed) <= TIMING_TOLERANCE
+
+
+def check_monophonic_track(errors: list[str], notes: list[object], label: str) -> None:
+    parsed = sorted((item for note in notes if (item := parsed_note(note)) is not None), key=lambda item: item[0])
+    for previous, current in zip(parsed, parsed[1:]):
+        if current[0] < previous[0] + previous[1] - TIMING_TOLERANCE:
+            fail(errors, f"{label}出现音符重叠；同一件单音乐器一次只能清楚演奏一个音。")
+            return
 
 
 def main() -> int:
@@ -110,6 +168,7 @@ def main() -> int:
             fail(errors, f"主旋律没有完整继承心情核心动机：{'-'.join(motif_letters)}。")
 
     chords = skeleton.get("chords")
+    chord_timeline: list[tuple[float, str]] = []
     if not isinstance(chords, list) or not 1 <= len(chords) <= 4:
         fail(errors, "chords 必须包含 1—4 个可渲染和弦。")
     else:
@@ -128,6 +187,8 @@ def main() -> int:
                 fail(errors, f"第 {index} 个和弦开始拍超出 0—8 拍范围。")
             chord_symbols.append(symbol)
             chord_beats.append(beat)
+            if symbol in SUPPORTED_CHORDS and math.isfinite(beat):
+                chord_timeline.append((beat, symbol))
 
         expected_symbols = task.get("harmonyPlan")
         if expected_symbols and chord_symbols != expected_symbols:
@@ -137,6 +198,11 @@ def main() -> int:
                 fail(errors, "第一个和弦必须从第 0 拍开始，保证两小节完整覆盖。")
             if any(current <= previous for previous, current in zip(chord_beats, chord_beats[1:])):
                 fail(errors, "和弦开始拍必须严格递增；具体换和弦位置不作固定限制。")
+            groove_id_for_chords = str(task.get("grooveId", ""))
+            for index, beat in enumerate(chord_beats, start=1):
+                if not matches_timing_grid(beat, groove_id_for_chords):
+                    grid_label = "三连音式整数拍、n+0.333或n+0.667" if groove_id_for_chords == "sway" else "直拍整数拍、八分或十六分位置"
+                    fail(errors, f"第 {index} 个和弦换拍没有落在当前律动的{grid_label}时间网格上。")
 
     bass_roots = skeleton.get("bassRoots")
     if not isinstance(bass_roots, list) or not 1 <= len(bass_roots) <= 64:
@@ -150,8 +216,16 @@ def main() -> int:
             except (KeyError, TypeError, ValueError):
                 fail(errors, f"第 {index} 个贝斯音缺少 pitch、beat 或 duration。")
                 continue
-            if midi_number(pitch) is None:
+            pitch_value = midi_number(pitch)
+            if pitch_value is None:
                 fail(errors, f"第 {index} 个贝斯音无法转换为有效 MIDI 音高：{pitch!r}。")
+            match = PITCH_RE.match(pitch) if isinstance(pitch, str) else None
+            if match:
+                letter, accidental, octave_text = match.groups()
+                octave = int(octave_text)
+                in_bass_range = octave == 2 or (octave == 3 and letter == "C")
+                if accidental or not in_bass_range:
+                    fail(errors, f"第 {index} 个贝斯音 {pitch} 超出允许名单；只能使用 C2、D2、E2、F2、G2、A2、B2、C3，禁止 D3 及以上音。")
             if not all(math.isfinite(value) for value in (beat, duration)) or not (0 <= beat < task["totalBeats"]) or duration <= 0 or beat + duration > task["totalBeats"]:
                 fail(errors, f"第 {index} 个贝斯音超出两小节的 0—8 拍范围。")
 
@@ -164,6 +238,7 @@ def main() -> int:
                 instrument = event["instrument"]
                 beat = float(event["beat"])
                 duration = float(event["duration"])
+                velocity = int(event.get("velocity", 92))
             except (KeyError, TypeError, ValueError):
                 fail(errors, f"第 {index} 个鼓事件缺少 instrument、beat 或 duration。")
                 continue
@@ -171,6 +246,21 @@ def main() -> int:
                 fail(errors, f"第 {index} 个鼓事件使用了无法渲染的乐器：{instrument!r}。")
             if not all(math.isfinite(value) for value in (beat, duration)) or not (0 <= beat < task["totalBeats"]) or duration <= 0 or beat + duration > task["totalBeats"]:
                 fail(errors, f"第 {index} 个鼓事件超出两小节的 0—8 拍范围。")
+            if not 1 <= velocity <= 127:
+                fail(errors, f"第 {index} 个鼓事件的力度必须在 1—127 之间。")
+
+        locked_events = task.get("grooveTemplate", {}).get("drumCore", {}).get("lockedEvents", {})
+        for instrument, expected_beats in locked_events.items():
+            actual_beats = []
+            for event in drum_grid:
+                if isinstance(event, dict) and event.get("instrument") == instrument:
+                    try:
+                        actual_beats.append(float(event["beat"]))
+                    except (KeyError, TypeError, ValueError):
+                        pass
+            for expected in expected_beats:
+                if not any(abs(actual - float(expected)) <= TIMING_TOLERANCE for actual in actual_beats):
+                    fail(errors, f"鼓组缺少当前律动锁定的 {instrument} 核心拍点：第 {expected} 拍。")
 
     lion_allowed_beats = skeleton.get("lionAllowedBeats")
     if not isinstance(lion_allowed_beats, list) or len(lion_allowed_beats) > 64:
@@ -204,12 +294,141 @@ def main() -> int:
                 continue
             letter, accidental, octave_text = match.groups()
             octave = int(octave_text)
-            if accidental or not (octave == 4 or (octave == 5 and letter in {"C", "D", "E", "F", "G"})):
-                fail(errors, f"第 {index} 个萨克斯音 {pitch} 必须在 C 大调 C4—G5 可用音域内。")
+            in_lion_range = (octave == 3 and letter in {"A", "B"}) or octave == 4 or (octave == 5 and letter in {"C", "D", "E", "F", "G"})
+            if accidental or not in_lion_range:
+                fail(errors, f"第 {index} 个萨克斯音 {pitch} 必须在 C 大调 A3—G5 可用音域内。")
             if not all(math.isfinite(value) for value in (beat, duration)) or not (0 <= beat < task["totalBeats"]) or duration <= 0 or beat + duration > task["totalBeats"]:
                 fail(errors, f"第 {index} 个萨克斯音超出两小节的 0—8 拍范围。")
             if not (1 <= velocity <= 127):
                 fail(errors, f"第 {index} 个萨克斯音力度必须在 MIDI 的 1—127 范围内。")
+
+    pitched_tracks = (("主旋律", melody), ("贝斯", bass_roots), ("萨克斯", lion_notes))
+    groove_id = str(task.get("grooveId", ""))
+    for label, notes in pitched_tracks:
+        if not isinstance(notes, list):
+            continue
+        check_monophonic_track(errors, notes, label)
+        for index, note in enumerate(notes, start=1):
+            parsed = parsed_note(note)
+            if parsed is None:
+                continue
+            beat, duration, _, _ = parsed
+            if not matches_timing_grid(beat, groove_id) or not matches_timing_grid(beat + duration, groove_id):
+                grid_label = "三连音式整数拍、n+0.333或n+0.667" if groove_id == "sway" else "直拍整数拍、八分或十六分位置"
+                fail(errors, f"第 {index} 个{label}音没有落在当前律动的{grid_label}时间网格上。")
+
+    if groove_id == "steady" and isinstance(melody, list) and isinstance(bass_roots, list) and isinstance(drum_grid, list):
+        melody_parsed = [parsed for note in melody if (parsed := parsed_note(note)) is not None]
+        bass_parsed = [parsed for note in bass_roots if (parsed := parsed_note(note)) is not None]
+        if melody_parsed and sum(is_integer_beat(item[0]) for item in melody_parsed) / len(melody_parsed) < 0.7:
+            fail(errors, "稳稳走的旋律至少70%的音必须从整数拍开始；请把装饰性弱拍收回到稳定步伐，不要写成摇摆节奏。")
+        if not 3 <= len(bass_parsed) <= 5:
+            fail(errors, "稳稳走的贝斯应使用3—5个长音形成稳定脚步。")
+        if any(not is_integer_beat(item[0]) or item[1] < 1 - TIMING_TOLERANCE for item in bass_parsed):
+            fail(errors, "稳稳走的贝斯必须全部从整数拍开始且每音至少持续1拍。")
+        for event in drum_grid:
+            try:
+                if event.get("instrument") == "hihat" and not is_integer_beat(float(event["beat"])):
+                    fail(errors, "稳稳走的踩镲只保留整数拍核心脚步，不得加入弱拍踩镲，以免接近摇一摇。")
+                    break
+            except (KeyError, TypeError, ValueError):
+                continue
+
+    if groove_id == "sway" and isinstance(melody, list) and isinstance(bass_roots, list):
+        melody_parsed = [parsed for note in melody if (parsed := parsed_note(note)) is not None]
+        bass_parsed = [parsed for note in bass_roots if (parsed := parsed_note(note)) is not None]
+        melody_pushes = sum(is_triplet_offbeat(item[0]) for item in melody_parsed)
+        bass_pushes = sum(is_triplet_offbeat(item[0]) for item in bass_parsed)
+        if melody_pushes < 2:
+            fail(errors, "摇一摇的主旋律至少需要2个三连音弱拍进入，不能只在一个局部象征性使用Shuffle。")
+        if len(bass_parsed) < 6 or bass_pushes < 2:
+            fail(errors, "摇一摇的贝斯至少需要6个音，并包含至少2个三连音弱拍进入，以形成持续可听见的左右摆动。")
+
+    if chord_timeline:
+        for label, notes in (("主旋律", melody), ("萨克斯", lion_notes)):
+            if not isinstance(notes, list):
+                continue
+            parsed_track = sorted(
+                ((index, note, parsed) for index, note in enumerate(notes, start=1) if (parsed := parsed_note(note)) is not None),
+                key=lambda item: item[2][0],
+            )
+            for index, note, parsed in parsed_track:
+                beat, duration, letter, midi = parsed
+                chord = active_chord(chord_timeline, beat)
+                if duration >= 1.5 - TIMING_TOLERANCE and chord and letter not in CHORD_TONES[chord]:
+                    fail(errors, f"第 {index} 个{label}长音 {note.get('pitch')} 在 {chord} 和弦上持续较久但不是和弦音；请优先缩短到1.5拍以下或移动后续换和弦拍点，不得替换母版和弦。")
+                note_end = beat + duration
+                for change_beat, new_chord in chord_timeline[1:]:
+                    if not (beat + TIMING_TOLERANCE < change_beat < note_end - TIMING_TOLERANCE):
+                        continue
+                    if letter in CHORD_TONES[new_chord]:
+                        continue
+                    resolved = False
+                    for _, _, next_parsed in parsed_track:
+                        next_beat, _, next_letter, next_midi = next_parsed
+                        if next_beat < change_beat - TIMING_TOLERANCE:
+                            continue
+                        if next_beat > change_beat + 1 + TIMING_TOLERANCE:
+                            break
+                        if next_letter in CHORD_TONES[new_chord] and abs(next_midi - midi) <= 2:
+                            resolved = True
+                            break
+                    if not resolved:
+                        fail(errors, f"第 {index} 个{label}音 {note.get('pitch')} 跨到第 {change_beat:g} 拍的 {new_chord} 和弦后不是和弦音，也没有在1拍内级进解决；请缩短该音、移动换和弦拍点或补充级进解决，不得替换母版和弦。")
+
+        if isinstance(bass_roots, list):
+            for index, note in enumerate(bass_roots, start=1):
+                parsed = parsed_note(note)
+                if parsed is None:
+                    continue
+                beat, duration, letter, _ = parsed
+                chord = active_chord(chord_timeline, beat)
+                strong_beat = abs(beat - round(beat)) <= TIMING_TOLERANCE
+                if chord and (strong_beat or duration >= 1 - TIMING_TOLERANCE) and letter not in CHORD_ROOT_FIFTH[chord]:
+                    fail(errors, f"第 {index} 个贝斯重拍或长音 {note.get('pitch')} 没有使用 {chord} 和弦的根音或五度音；请修改该贝斯音或将其移到弱拍，不得替换母版和弦。")
+
+    if isinstance(melody, list) and isinstance(lion_notes, list):
+        for melody_note in melody:
+            melody_parsed = parsed_note(melody_note)
+            if melody_parsed is None:
+                continue
+            melody_beat, melody_duration, _, melody_midi = melody_parsed
+            for lion_note in lion_notes:
+                lion_parsed = parsed_note(lion_note)
+                if lion_parsed is None:
+                    continue
+                lion_beat, lion_duration, _, lion_midi = lion_parsed
+                overlap = min(melody_beat + melody_duration, lion_beat + lion_duration) - max(melody_beat, lion_beat)
+                if overlap >= 0.5 - TIMING_TOLERANCE and 0 < abs(melody_midi - lion_midi) <= 2:
+                    fail(errors, f"主旋律 {melody_note.get('pitch')} 与萨克斯 {lion_note.get('pitch')} 持续相邻摩擦超过0.5拍，请改用协和音程或错开进入。")
+
+    if isinstance(lion_notes, list):
+        parsed_lion = sorted((item for note in lion_notes if (item := parsed_note(note)) is not None), key=lambda item: item[0])
+        phrases: list[list[tuple[float, float, str, int]]] = []
+        for note in parsed_lion:
+            if not phrases or note[0] - (phrases[-1][-1][0] + phrases[-1][-1][1]) > 0.5 + TIMING_TOLERANCE:
+                phrases.append([note])
+            else:
+                phrases[-1].append(note)
+        if len(phrases) > 2:
+            fail(errors, "萨克斯被切成超过2个彼此分离的片段，容易听成断续点缀；请合并为1—2个完整乐句或背景长音。")
+        for phrase in phrases:
+            if len(phrase) == 1 and phrase[0][1] < 1.5 - TIMING_TOLERANCE:
+                fail(errors, "萨克斯存在短于1.5拍且没有与前后音连接的孤立单音，请延长为背景音或补成完整回应乐句。")
+            if len(phrase) > 4:
+                fail(errors, "单个萨克斯回应超过4个音，容易成为第二条主旋律；请简化为2—4个连贯音。")
+
+    if all(isinstance(notes, list) for notes in (melody, bass_roots, lion_notes)):
+        short_starts = []
+        for notes in (melody, bass_roots, lion_notes):
+            short_starts.append([
+                parsed[0] for note in notes
+                if (parsed := parsed_note(note)) is not None and parsed[1] < 0.75 - TIMING_TOLERANCE
+            ])
+        for beat in short_starts[0]:
+            if any(abs(beat - other) <= TIMING_TOLERANCE for other in short_starts[1]) and any(abs(beat - other) <= TIMING_TOLERANCE for other in short_starts[2]):
+                fail(errors, f"第 {beat:g} 拍主旋律、贝斯和萨克斯同时进行短音变化，容易互相争抢；请至少简化一个陪衬声部。")
+                break
 
     if errors:
         print("检查未通过：")
@@ -217,7 +436,7 @@ def main() -> int:
             print(f"- {error}")
         return 1
 
-    print(f"检查通过：两小节8拍、{task['bpm']} BPM、母版动机与和声继承、所有分轨数据可渲染且未越界。")
+    print(f"检查通过：两小节8拍、{task['bpm']} BPM、母版与鼓型继承、时间网格统一，未发现明显声部碰撞或孤立萨克斯音。")
     return 0
 
 

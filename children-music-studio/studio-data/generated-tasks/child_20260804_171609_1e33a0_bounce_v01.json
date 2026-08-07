@@ -1,0 +1,173 @@
+{
+  "kitId": "child_20260804_171609_1e33a0_bounce_v01",
+  "feelingId": "child_20260804_171609_1e33a0",
+  "grooveId": "bounce",
+  "feeling": "放学蹦蹦跳",
+  "groove": "蹦蹦跳跳",
+  "bpm": 116,
+  "timeSignature": "4/4",
+  "key": "C major",
+  "bars": 2,
+  "totalBeats": 8,
+  "targetAge": "6-12",
+  "melodyRange": [
+    "C4",
+    "C5"
+  ],
+  "bassAllowedPitches": [
+    "C2",
+    "D2",
+    "E2",
+    "F2",
+    "G2",
+    "A2",
+    "B2",
+    "C3"
+  ],
+  "model": "qwen3.7-max",
+  "coreMotif": {
+    "scaleDegrees": [
+      1,
+      3,
+      5,
+      6,
+      5,
+      3,
+      2,
+      1
+    ],
+    "referenceDurations": [
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1,
+      1
+    ],
+    "identityNote": 5
+  },
+  "harmonyPlan": [
+    "C",
+    "G",
+    "Am",
+    "C"
+  ],
+  "grooveTemplate": {
+    "id": "bounce",
+    "label": "蹦蹦跳",
+    "bpm": 96,
+    "identity": "像双脚轻跳：短音后要有小空隙，重心清楚，听到“弹起—落下”的反弹感。",
+    "subdivision": "1/8",
+    "timingGrid": "straight-eighth：有音高声部主要使用整数拍与n+0.5，不使用n+0.333或n+0.667摇摆弱拍",
+    "accent": "倾向短音、轻巧重音和反弹感，休止与延音比例由编曲自由决定",
+    "melodyRhythm": "可通过缩短、重复、休止或重音变化，把核心动机解释成弹起再落下的感觉",
+    "drumRule": "使用少儿架子鼓四踩与反拍踩镲；核心鼓点固定，心情只调整力度、可选双跳和第二小节细节",
+    "drumCore": {
+      "teachingBasis": "四踩加反拍踩镲",
+      "lockedEvents": {
+        "kick": [
+          0,
+          1,
+          2,
+          3,
+          4,
+          5,
+          6,
+          7
+        ],
+        "snare": [
+          1,
+          3,
+          5,
+          7
+        ],
+        "hihat": [
+          0.5,
+          1.5,
+          2.5,
+          3.5,
+          4.5,
+          5.5,
+          6.5,
+          7.5
+        ]
+      },
+      "allowedMoodVariation": "保留全部核心事件；可按心情调整力度，并加入极少量双跳、轻回应或句尾连接",
+      "avoid": "不要改回底鼓只在第1和第3拍的稳稳走骨架，也不要铺满连续八分踩镲"
+    },
+    "bassRule": "贝斯可与鼓组形成轻巧弹性，但主旋律短音活跃时只做根音或长音支撑，避免同步增加另一条跳动旋律",
+    "keyboardRule": "键盘可用断奏、留白或其他轻盈织体表现弹跳，具体弹法自由选择",
+    "ensembleRule": "弹跳感由主旋律与核心鼓型承担；萨克斯回应必须是完整短句，不得用零散单音重复每次反拍",
+    "energy": 0.68,
+    "syncopation": 0.2
+  },
+  "grooveIdentityGate": "蹦蹦跳的最低身份：保留四踩底鼓与反拍踩镲，通过短音、休止或轻重形成清楚的弹起—落下；不得退化成均匀长音步行。",
+  "designCard": {
+    "title": "放学蹦蹦跳",
+    "designIntent": "用明亮短促的动机与弹跳律动，描绘放学后与朋友一起玩耍的开心场景，让6—12岁儿童能轻松跟唱、跟跳。",
+    "moodSummary": "放学后，和朋友一起玩，开心。",
+    "grooveSummary": "蹦蹦跳跳",
+    "grooveFamily": "bounce",
+    "bpm": 116,
+    "coreMotif": {
+      "scaleDegrees": [
+        1,
+        3,
+        5,
+        6,
+        5,
+        3,
+        2,
+        1
+      ],
+      "referenceDurations": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "identityNote": 5
+    },
+    "harmonyPlan": [
+      "C",
+      "G",
+      "Am",
+      "C"
+    ],
+    "melodyProfile": {
+      "contour": "先上行跳进到高音5与6，再级进下行回到主音1，形成拱形轮廓",
+      "range": "1—6（C大调主音到下中音，纯六度）",
+      "density": "每拍一音，共8音，密度适中便于跟唱",
+      "phraseBreath": "第4拍后设自然气口，将8拍分为两个4拍乐句",
+      "ending": "第7—8拍以2→1级进收束到主音，稳定落地"
+    },
+    "arrangement": {
+      "keyboardRole": "唯一前景旋律，演奏完整8拍核心动机，音色明亮清脆",
+      "bassRole": "小猫贝斯在第1、3、5、7拍演奏和弦根音，每音持续2拍，提供稳定推动力",
+      "drumRole": "小狗鼓组以直拍网格建立蹦跳身体感：底鼓落在第1、3、5、7拍，军鼓落在第2、4、6、8拍，踩镲每拍轻点",
+      "saxRole": "柔和背景长音",
+      "saxPhrasePlan": "全曲1个背景长音：在第3—4拍吹奏高音3（mi），持续2拍，与键盘旋律第3拍（5）和第4拍（6）形成和声填充，不干扰主旋律方向变化"
+    },
+    "safetyReview": {
+      "likelyConflicts": [
+        "第3拍键盘旋律上行到5同时萨克斯长音进入，可能造成音区拥挤",
+        "第7—8拍收束区贝斯若加入经过音会破坏终止感"
+      ],
+      "resolutions": [
+        "萨克斯长音选择高音3，与键盘旋律5、6构成三度/二度关系，音区错开避免拥挤",
+        "贝斯在第7拍仅演奏C和弦根音并持续至第8拍结束，不添加任何经过音或装饰音"
+      ]
+    },
+    "designId": "child_20260804_171609_1e33a0",
+    "moodInput": "放学后，和朋友一起玩，开心。",
+    "grooveInput": "蹦蹦跳跳",
+    "model": "qwen3.7-max",
+    "version": "children-design-v1"
+  }
+}

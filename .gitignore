@@ -14,3 +14,7 @@ audio-production/studio-data/
 # Python 运行缓存
 __pycache__/
 *.py[cod]
+
+# 本机密钥与过程输出
+.env
+output/

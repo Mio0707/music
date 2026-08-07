@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "packId": "happy_bounce",
+  "sourceKitId": "happy_bounce_v01",
+  "version": "v01",
+  "feeling": "happy",
+  "groove": "bounce",
+  "bpm": 96,
+  "timeSignature": "4/4",
+  "bars": 2,
+  "durationSeconds": 5.0,
+  "loop": {
+    "enabled": true,
+    "startFrame": 0,
+    "endFrame": 240000
+  },
+  "audio": {
+    "format": "wav",
+    "encoding": "pcm_s16le",
+    "sampleRate": 48000,
+    "channels": 2,
+    "bitDepth": 16,
+    "frames": 240000
+  },
+  "stems": {
+    "bear": "stems/bear.wav",
+    "cat": "stems/cat.wav",
+    "dog": "stems/dog.wav",
+    "lion": "stems/lion.wav",
+    "rabbit": "stems/rabbit.wav"
+  },
+  "stemRoles": {
+    "bear": "keyboard_and_melody",
+    "cat": "bass",
+    "dog": "drums",
+    "lion": "alto_sax_response",
+    "rabbit": "solfege_vocal_melody"
+  },
+  "stemGains": {
+    "bear": 1.0,
+    "cat": 1.0,
+    "dog": 1.0,
+    "lion": 1.0,
+    "rabbit": 1.0
+  },
+  "checksums": {
+    "bear": "be65441b49edc84b613f77827c2ec4ffe8044306fdb03eb98df3ccbab2bba920",
+    "cat": "c4b69339e6004f339d86e57ac806f2e864b103b0856e54e684e001287cfc4590",
+    "dog": "d6a5a66c16d6c10504af9e5dcf5a2a86df1a2e82342edf60cecbdb52155252b9",
+    "lion": "4aa659856ab9007b2b309c64ad0a40cfc250ea9b4f07e884bc8e91e1fd72f66a",
+    "rabbit": "47e7bf0795274e11824d76ffb050a5e994925121669f5b5b44806fd01b56676b"
+  },
+  "mixPreview": "preview/mix.wav",
+  "score": "score.json",
+  "publishedAt": "2026-08-04T16:15:36"
+}

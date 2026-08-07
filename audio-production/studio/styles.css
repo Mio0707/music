@@ -74,6 +74,11 @@ h1 { margin: 0; font-size: clamp(38px, 6vw, 62px); line-height: 1.05; letter-spa
 .theme-editor { min-width: 0; padding: 25px; }
 .editor-heading, .production-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
 .editor-heading h3, .production-heading h3 { margin: 0; font-size: 17px; }
+.json-freshness { display: inline-flex; margin-top: 7px; padding: 5px 9px; border-radius: 999px; color: var(--muted); background: #f2efe9; font-size: 11px; font-weight: 850; }
+.json-freshness:empty { display: none; }
+.json-freshness.is-stale { color: #a63a32; background: #fff0ed; }
+.json-freshness.is-pending { color: #8b5b12; background: #fff4d8; }
+.json-freshness.is-current { color: #28775d; background: #e9f6ef; }
 .compact-heading { margin-top: 22px; padding-top: 22px; border-top: 1px solid var(--line); }
 textarea { width: 100%; resize: vertical; border: 1px solid var(--line); border-radius: 14px; color: var(--ink); background: #fffdf9; outline: none; line-height: 1.65; }
 textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(237,120,70,.1); }
@@ -87,6 +92,8 @@ textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(2
 .button.primary:not(:disabled):hover { background: var(--orange-dark); }
 .button.dark { color: #fff; background: var(--ink); }
 .button.secondary { background: #eee8df; }
+.button.danger { color: #a53532; background: #fbe9e7; }
+.button.danger:not(:disabled):hover { color: #fff; background: #c84a43; }
 .button.compact { min-height: 38px; padding: 0 14px; font-size: 12px; }
 .status { min-height: 22px; margin-top: 15px; color: var(--muted); font-size: 13px; }
 .status.is-error { color: #b94138; }
@@ -118,7 +125,14 @@ textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(2
 .mini-number { display: grid; place-items: center; width: 31px; height: 31px; border-radius: 10px; color: #fff; background: var(--green); font-size: 11px; font-weight: 900; }
 .production-heading { margin: 0; }
 .production-heading p { margin: 4px 0 0; color: var(--muted); font-size: 12px; }
-.json-preview { max-height: 330px; margin: 14px 0 0; padding: 16px; overflow: auto; border-radius: 14px; color: #dbe8f7; background: #202b3d; font: 12px/1.6 Consolas, monospace; white-space: pre-wrap; }
+.json-editor-wrap { margin-top: 14px; }
+.json-editor-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 9px; }
+.json-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.json-edit-status { padding: 6px 9px; border-radius: 999px; color: var(--muted); background: #f2efe9; font-size: 11px; font-weight: 850; }
+.json-edit-status.is-saved { color: #28775d; background: #e9f6ef; }
+.json-edit-status.is-dirty { color: #8b5b12; background: #fff4d8; }
+.json-edit-status.is-error { color: #a63a32; background: #fff0ed; }
+.combination-json-editor { min-height: 390px; box-sizing: border-box; resize: vertical; }
 .preview-box { display: flex; align-items: center; gap: 12px; margin-top: 14px; padding: 13px; border-radius: 14px; background: var(--green-soft); }
 .preview-box audio { width: 100%; }
 .theme-preview-actions { display: flex; align-items: center; gap: 12px; margin-top: 14px; }
@@ -182,7 +196,9 @@ textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(2
 .pending-box, .download-box { display: flex; align-items: center; gap: 12px; margin-top: 15px; padding: 13px 15px; border-radius: 13px; background: var(--yellow-soft); font-size: 12px; }
 .pending-box span { color: #776a58; }
 .export-row p { margin: 0; color: var(--muted); font-size: 12px; }
+.export-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 .download-box { justify-content: space-between; background: var(--green-soft); }
+.publish-box { background: #eef7ff; }
 
 @media (max-width: 900px) {
   .overview { grid-template-columns: 1fr 90px; }
@@ -207,7 +223,9 @@ textarea:focus { border-color: rgba(237,120,70,.7); box-shadow: 0 0 0 3px rgba(2
   .theme-guide { grid-template-columns: 1fr; }
   .theme-guide .inherit-list { grid-column: auto; grid-template-columns: 1fr; }
   .theme-editor { padding: 18px; }
-  .editor-heading, .production-heading, .combination-banner, .preview-box, .export-row { align-items: stretch; flex-direction: column; }
+  .editor-heading, .production-heading, .combination-banner, .preview-box, .export-row, .json-editor-toolbar { align-items: stretch; flex-direction: column; }
+  .export-actions { justify-content: stretch; }
+  .export-actions .button { flex: 1; }
   .arrangement-heading { flex-wrap: wrap; }
   .family-badge { margin-left: 57px; }
   .production-steps { padding: 3px 16px; }
