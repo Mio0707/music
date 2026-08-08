@@ -7,3 +7,14 @@ Thumbs.db
 
 # 图像抠图过程中的纯色背景中间文件
 prototype/assets/stickers/*-key.png
+
+# 本地音乐平台生成的任务与音频
+audio-production/studio-data/
+
+# Python 运行缓存
+__pycache__/
+*.py[cod]
+
+# 本机密钥与过程输出
+.env
+output/

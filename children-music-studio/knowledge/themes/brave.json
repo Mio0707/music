@@ -1,0 +1,62 @@
+{
+  "emotionId": "brave",
+  "label": "勇敢",
+  "version": "brave-theme-v1",
+  "designIntent": "以坚定上行四度跳进与重复音型塑造跨越障碍后站稳的力量感，旋律轮廓清晰、收束果断，传递持续向前的勇气。",
+  "coreMotif": {
+    "scaleDegrees": [
+      1,
+      1,
+      4,
+      5,
+      5,
+      6,
+      5,
+      1
+    ],
+    "referenceDurations": [
+      1,
+      0.5,
+      0.5,
+      1,
+      1,
+      1,
+      1,
+      2
+    ],
+    "requiredAppearances": 1
+  },
+  "melodyGrammar": {
+    "contour": "ascending-then-resolve",
+    "preferredIntervals": [
+      "P4",
+      "P5",
+      "M2",
+      "unison"
+    ],
+    "phraseEnding": "firm-tonic-octave-leap",
+    "noteDensity": "moderate"
+  },
+  "harmonyLanguage": {
+    "primaryPlan": [
+      "C",
+      "F",
+      "G",
+      "C"
+    ],
+    "allowedChords": [
+      "C",
+      "Dm",
+      "Em",
+      "F",
+      "G",
+      "Am"
+    ],
+    "cadence": "authentic"
+  },
+  "expression": {
+    "dynamicRange": "mf-to-f",
+    "articulation": "marcato-with-sustained-ending",
+    "phraseBreath": "steady-inhale-at-barline"
+  }
+}

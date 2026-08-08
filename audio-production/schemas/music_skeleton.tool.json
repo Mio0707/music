@@ -1,0 +1,86 @@
+{
+  "type": "function",
+  "function": {
+    "name": "submit_music_skeleton",
+    "description": "提交一份严格符合 happy_bounce_v01 任务卡的两小节音乐骨架。不得返回课程方案、段落说明或完整歌曲。",
+    "parameters": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kitId", "feeling", "groove", "bpm", "timeSignature", "key", "bars", "melody", "chords", "bassRoots", "drumGrid", "lionAllowedBeats", "lionNotes"],
+      "properties": {
+        "kitId": {"type": "string", "const": "happy_bounce_v01"},
+        "feeling": {"type": "string", "const": "happy"},
+        "groove": {"type": "string", "const": "bounce"},
+        "bpm": {"type": "integer", "const": 96},
+        "timeSignature": {"type": "string", "const": "4/4"},
+        "key": {"type": "string", "const": "C major"},
+        "bars": {"type": "integer", "const": 2},
+        "melody": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pitch", "beat", "duration", "solfege"],
+            "properties": {
+              "pitch": {"type": "string"},
+              "beat": {"type": "number", "minimum": 0, "exclusiveMaximum": 8},
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 8},
+              "solfege": {"type": "string", "enum": ["do", "re", "mi", "fa", "sol", "la", "si"]}
+            }
+          }
+        },
+        "chords": {
+          "type": "array", "minItems": 1, "maxItems": 4,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["beat", "symbol"],
+            "properties": {
+              "beat": {"type": "number", "minimum": 0, "exclusiveMaximum": 8},
+              "symbol": {"type": "string", "enum": ["C", "Dm", "Em", "F", "G", "Am"]}
+            }
+          }
+        },
+        "bassRoots": {
+          "type": "array", "minItems": 1, "maxItems": 64,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["pitch", "beat", "duration"],
+            "properties": {
+              "pitch": {"type": "string", "pattern": "^[A-G](#|b)?-?[0-9]+$"},
+              "beat": {"type": "number", "minimum": 0, "exclusiveMaximum": 8},
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 8}
+            }
+          }
+        },
+        "drumGrid": {
+          "type": "array", "minItems": 1, "maxItems": 128,
+          "items": {
+            "type": "object", "additionalProperties": false, "required": ["instrument", "beat", "duration"],
+            "properties": {
+              "instrument": {"type": "string", "enum": ["kick", "snare", "hihat"]},
+              "beat": {"type": "number", "minimum": 0, "exclusiveMaximum": 8},
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 8}
+            }
+          }
+        },
+        "lionAllowedBeats": {"type": "array", "maxItems": 64, "description": "仅兼容旧数据，可以为空，不参与创作约束。", "items": {"type": "number", "minimum": 0, "exclusiveMaximum": 8}},
+        "lionNotes": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["pitch", "beat", "duration", "velocity"],
+            "properties": {
+              "pitch": {"type": "string", "pattern": "^(C4|D4|E4|F4|G4|A4|B4|C5|D5|E5|F5|G5)$"},
+              "beat": {"type": "number", "minimum": 0, "exclusiveMaximum": 8},
+              "duration": {"type": "number", "exclusiveMinimum": 0, "maximum": 8},
+              "velocity": {"type": "integer", "minimum": 1, "maximum": 127}
+            }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "schemaVersion": 1,
+  "packId": "brave_forward",
+  "sourceKitId": "brave_forward_v01",
+  "version": "v01",
+  "feeling": "brave",
+  "groove": "forward",
+  "bpm": 108,
+  "timeSignature": "4/4",
+  "bars": 2,
+  "durationSeconds": 4.444438,
+  "loop": {
+    "enabled": true,
+    "startFrame": 0,
+    "endFrame": 213333
+  },
+  "audio": {
+    "format": "wav",
+    "encoding": "pcm_s16le",
+    "sampleRate": 48000,
+    "channels": 2,
+    "bitDepth": 16,
+    "frames": 213333
+  },
+  "stems": {
+    "bear": "stems/bear.wav",
+    "cat": "stems/cat.wav",
+    "dog": "stems/dog.wav",
+    "lion": "stems/lion.wav",
+    "rabbit": "stems/rabbit.wav"
+  },
+  "stemRoles": {
+    "bear": "keyboard_and_melody",
+    "cat": "bass",
+    "dog": "drums",
+    "lion": "alto_sax_response",
+    "rabbit": "solfege_vocal_melody"
+  },
+  "stemGains": {
+    "bear": 1.0,
+    "cat": 1.0,
+    "dog": 1.0,
+    "lion": 1.0,
+    "rabbit": 1.0
+  },
+  "checksums": {
+    "bear": "dde3a4dd43ea0a840da20a61b55b46b84c589fc07cadeb99a83d28f9989517dd",
+    "cat": "2568931e7e21e9bc3c370b68b7b678697cc9914c846bf4d922f7ce1628a1ad33",
+    "dog": "6c2dfd8c99bc678055c6a7bab338b605165c5381f9cc46fc057dfb3e30d58d9f",
+    "lion": "78099af18e3778075e43a85f2d817b02193aaad1eb52829e720b28f5cf57fae3",
+    "rabbit": "1d94738f9310b76db96e967578d8a0246c3c70c2beac49cd63b1134717ff63a1"
+  },
+  "mixPreview": "preview/mix.wav",
+  "score": "score.json",
+  "publishedAt": "2026-08-04T16:14:42"
+}

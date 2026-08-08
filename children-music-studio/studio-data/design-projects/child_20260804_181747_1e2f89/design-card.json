@@ -1,0 +1,76 @@
+{
+  "title": "放学蹦蹦跳",
+  "designIntent": "用短促跳跃的动机与轻快弹跳的律动，描绘放学后与朋友一起玩耍的开心场景。",
+  "moodSummary": "放学后，和朋友一起玩，开心。",
+  "grooveSummary": "蹦蹦跳跳",
+  "grooveFamily": "bounce",
+  "bpm": 112,
+  "coreMotif": {
+    "scaleDegrees": [
+      5,
+      6,
+      5,
+      3
+    ],
+    "referenceDurations": [
+      0.5,
+      0.5,
+      0.5,
+      0.5
+    ],
+    "identityNote": 6
+  },
+  "harmonyPlan": [
+    "C",
+    "F",
+    "G",
+    "C"
+  ],
+  "melodyProfile": {
+    "contour": "UDUDDUD",
+    "range": "1-6",
+    "density": "medium-high",
+    "phraseBreath": "two-bar single phrase with mid-phrase rest",
+    "ending": "stable on degree 1, last 1 beat",
+    "openingDegree": 5,
+    "highPointBeat": 2.5,
+    "phraseStructure": "A(2beats) + rest(0.5) + A'(2beats) + cadence(1beat)",
+    "cadenceDegree": 1,
+    "repetitionStrategy": "motif stated twice with slight rhythmic variation and connecting leap"
+  },
+  "arrangement": {
+    "keyboardRole": "sole foreground melody, staccato bounce articulation",
+    "bassRole": "root notes on beats 1 and 3, quarter-note pulse with slight ghost on off-beats",
+    "drumRole": "kick on 1 and 3, snare on 2 and 4, closed hi-hat eighth notes for body bounce",
+    "saxRole": "soft background long tones",
+    "saxPhrasePlan": [
+      {
+        "type": "backgroundLongTone",
+        "startBeat": 1,
+        "durationBeats": 2,
+        "degree": 3
+      },
+      {
+        "type": "backgroundLongTone",
+        "startBeat": 5,
+        "durationBeats": 2,
+        "degree": 2
+      }
+    ]
+  },
+  "safetyReview": {
+    "likelyConflicts": [
+      "Keyboard staccato motif on beat 2.5 may clash with sax long tone sustaining through beat 2-3",
+      "Bass quarter-note pulse on beat 5 could overlap with sax second long tone entry"
+    ],
+    "resolutions": [
+      "Sax long tone on degree 3 is voiced an octave below keyboard and played at pp dynamic, avoiding frequency masking",
+      "Bass plays root note only on beats 1 and 3, rests on beat 5 first half; sax enters beat 5 alone before bass resumes on beat 7"
+    ]
+  },
+  "designId": "child_20260804_181747_1e2f89",
+  "moodInput": "放学后，和朋友一起玩，开心。",
+  "grooveInput": "蹦蹦跳跳",
+  "model": "qwen3.7-max",
+  "version": "children-design-v1"
+}

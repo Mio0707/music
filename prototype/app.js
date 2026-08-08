@@ -1,18 +1,250 @@
 const app = document.querySelector("#app");
 const toast = document.querySelector("#toast");
-const CREATION_BEATS = 4;
+const BEATS_PER_BAR = 4;
+const RECORD_BARS = 2;
+const MUSIC_ROOT = "assets/music";
+const SOLFEGE_ROOT = "assets/solfege/voice-katy-child-clean-v2";
+const SOLFEGE_SOURCE_FREQUENCIES = {
+  do: 261.6256,
+  re: 293.6648,
+  mi: 329.6276,
+  fa: 349.2282,
+  sol: 391.9954,
+  la: 440,
+  si: 493.8833
+};
+const CHILDREN_MUSIC_STUDIO_URL = "http://127.0.0.1:8766/";
+const grooveAudio = {
+  steady: { bpm: 88, duration: 5.454542 },
+  bounce: { bpm: 96, duration: 5 },
+  sway: { bpm: 84, duration: 5.714292 },
+  forward: { bpm: 108, duration: 4.444438 }
+};
+const BODY_ACTION_GUIDE = "assets/stickers/body-rhythm/dog-table-actions.png?v=2";
+const BODY_MOOD_ORDER = ["happy", "calm", "brave", "miss"];
+const BODY_GROOVE_ORDER = ["steady", "bounce", "sway", "forward"];
+const BODY_ACTIONS = {
+  dong: { syllable: "动", label: "敲桌面" },
+  ci: { syllable: "次", label: "敲桌沿" },
+  da: { syllable: "打", label: "拍手" }
+};
+const BODY_GROOVE_PATTERNS = {
+  steady: [
+    { beat: 0, action: "dong" }, { beat: .5, action: "ci" },
+    { beat: 1, action: "da" }, { beat: 1.5, action: "ci" },
+    { beat: 2, action: "dong" }, { beat: 2.5, action: "ci" },
+    { beat: 3, action: "da" }, { beat: 3.5, action: "ci" }
+  ],
+  bounce: [
+    { beat: 0, action: "dong" }, { beat: .5, action: "ci" },
+    { beat: 1, action: "da" }, { beat: 1.5, action: "ci" },
+    { beat: 2, action: "dong" }, { beat: 2.5, action: "ci" },
+    { beat: 3, action: "da" }, { beat: 3.5, action: "ci" }
+  ],
+  sway: [
+    { beat: 0, action: "dong" }, { beat: .667, action: "ci" },
+    { beat: 1, action: "da" }, { beat: 1.667, action: "ci" },
+    { beat: 2, action: "dong" }, { beat: 2.667, action: "ci" },
+    { beat: 3, action: "da" }, { beat: 3.667, action: "ci" }
+  ],
+  forward: [
+    { beat: 0, action: "dong" }, { beat: .5, action: "ci" },
+    { beat: 1, action: "da" }, { beat: 1.5, action: "dong" },
+    { beat: 2, action: "dong" }, { beat: 2.5, action: "ci" },
+    { beat: 3, action: "da" }, { beat: 3.5, action: "dong" }
+  ]
+};
+const bodyPackId = (mood, groove) => `${mood === "miss" ? "longing" : mood}_${groove}`;
+const BODY_LESSONS = BODY_GROOVE_ORDER.flatMap(groove => BODY_MOOD_ORDER.map(mood => ({
+  id: bodyPackId(mood, groove), mood, groove, bpm: grooveAudio[groove].bpm,
+  pattern: BODY_GROOVE_PATTERNS[groove]
+})));
+const bodyScoreCache = new Map();
+const bodyScoreLoading = new Set();
+
+function bodyScorePath(lesson) {
+  return `${MUSIC_ROOT}/${lesson.id}/v01/score.json`;
+}
+
+function bodyPatternFromScore(score) {
+  const priority = { kick: 3, snare: 2, hihat: 1 };
+  const actionByInstrument = { kick: "dong", snare: "da", hihat: "ci" };
+  const events = new Map();
+  (score.drumGrid || []).forEach(event => {
+    const beat = Number(Number(event.beat).toFixed(3));
+    const current = events.get(beat);
+    if (!current || (priority[event.instrument] || 0) > (priority[current.instrument] || 0)) events.set(beat, event);
+  });
+  return [...events.entries()].sort((a, b) => a[0] - b[0]).map(([beat, event]) => ({ beat, action: actionByInstrument[event.instrument] || "ci" }));
+}
+
+function bodyLessonPattern(lesson) {
+  return bodyScoreCache.get(lesson.id)?.bodyPattern || lesson.pattern;
+}
+
+function bodyDisplayPattern(lesson) {
+  return bodyLessonPattern(lesson).filter(step => step.beat < BEATS_PER_BAR);
+}
+
+function bodyLessonBpm(lesson) {
+  return bodyScoreCache.get(lesson.id)?.bpm || lesson.bpm;
+}
+
+function loadBodyScore(lesson) {
+  if (typeof fetch !== "function" || bodyScoreCache.has(lesson.id) || bodyScoreLoading.has(lesson.id)) return;
+  bodyScoreLoading.add(lesson.id);
+  fetch(bodyScorePath(lesson)).then(response => response.ok ? response.json() : null).then(score => {
+    if (!score) return;
+    bodyScoreCache.set(lesson.id, { ...score, bodyPattern: bodyPatternFromScore(score) });
+    if (state.screen === "feel-body") render();
+  }).catch(() => {}).finally(() => bodyScoreLoading.delete(lesson.id));
+}
+const arrangementAnimals = ["dog", "bear", "cat", "lion"];
+const stemAnimals = arrangementAnimals;
+const CARMEN_AUDIO = "assets/music/carmen/source.mp3";
+const CARMEN_GESTURE_PLAN = "assets/music/carmen/gesture-plan.json";
+const CARMEN_TITLE = "《卡门》序曲";
+const CARMEN_EXCERPT_SECONDS = 130.44;
+const FIXED_DEMO_MANIFEST = "assets/demo/fixed-demo.json";
+const FIXED_DEMO_SCORE = "assets/demo/dongfanghong.json";
+let fixedDemoManifest = null;
+const DEFAULT_SOLFEGE_LESSON = {
+  title: "《小星星》",
+  tonic: "C",
+  meter: { beats: 4, unit: 4 },
+  bpm: 84,
+  confidence: 1,
+  measures: [
+    { number: 1, notes: [
+      { degree: 1, octave: 0, beat: 0, duration: 1, startBeat: 0, solfege: "do", frequency: 261.626, confidence: 1 },
+      { degree: 1, octave: 0, beat: 1, duration: 1, startBeat: 1, solfege: "do", frequency: 261.626, confidence: 1 },
+      { degree: 5, octave: 0, beat: 2, duration: 1, startBeat: 2, solfege: "sol", frequency: 391.995, confidence: 1 },
+      { degree: 5, octave: 0, beat: 3, duration: 1, startBeat: 3, solfege: "sol", frequency: 391.995, confidence: 1 }
+    ] },
+    { number: 2, notes: [
+      { degree: 6, octave: 0, beat: 0, duration: 1, startBeat: 4, solfege: "la", frequency: 440, confidence: 1 },
+      { degree: 6, octave: 0, beat: 1, duration: 1, startBeat: 5, solfege: "la", frequency: 440, confidence: 1 },
+      { degree: 5, octave: 0, beat: 2, duration: 2, startBeat: 6, solfege: "sol", frequency: 391.995, confidence: 1 }
+    ] }
+  ],
+  notes: [],
+  totalBeats: 8,
+  warnings: [],
+  source: "built-in"
+};
+DEFAULT_SOLFEGE_LESSON.notes = DEFAULT_SOLFEGE_LESSON.measures.flatMap(measure => measure.notes);
+function lessonMeasure(number, phraseIds, specs, options = {}) {
+  let beat = 0;
+  const notes = specs.map((spec, index) => {
+    const [degree, octave, duration, lyric = ""] = spec;
+    const phraseId = Array.isArray(phraseIds) ? phraseIds[index] : phraseIds;
+    const note = { degree, octave, beat, duration, lyric, phraseId, confidence: 1 };
+    beat += duration;
+    return note;
+  });
+  return { number, pickup: Boolean(options.pickup), beats: options.beats || beat, meter: options.meter || "4/4", notes };
+}
+
+const DONGFANGHONG_SCORE = {
+  title: "《东方红》",
+  tonic: "F",
+  mode: "major",
+  meter: { beats: 2, unit: 4 },
+  bpm: 64,
+  confidence: 1,
+  measures: [
+    lessonMeasure(1, "page1", [[5, 0, 1, "东"], [5, 0, .5, "方"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(2, "page1", [[2, 0, 2, "红"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(3, "page1", [[1, 0, 1, "太"], [1, 0, .5, "阳"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(4, "page1", [[2, 0, 2, "升"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(5, "page2", [[5, 0, 1, "中"], [5, 0, 1, "国"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(6, "page2", [[6, 0, .5, "出"], [1, 1, .5], [6, 0, .5, "了"], [5, 0, .5, "个"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(7, "page2", [[1, 0, 1, "毛"], [1, 0, .5, "泽"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(8, "page2", [[2, 0, 2, "东"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(9, "page3", [[5, 0, 1, "他"], [2, 0, 1, "为"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(10, "page3", [[1, 0, 1, "人"], [7, -1, .5, "民"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(11, "page3", [[5, 0, 1, "谋"], [5, 0, 1, "幸"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(12, "page3", [[2, 0, 1, "福"], [3, 0, .5, "呼"], [2, 0, .5, "儿"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(13, "page4", [[1, 0, 1, "嗨"], [1, 0, .5, "哟"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(14, "page4", [[2, 0, .5, "他"], [3, 0, .5, "是"], [2, 0, .5, "人"], [1, 0, .5, "民"]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(15, "page4", [[2, 0, .5, "大"], [1, 0, .5], [7, -1, .5, "救"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(16, "page4", [[5, 0, 2, "星"]], { beats: 2, meter: "2/4" })
+  ],
+  phrases: [
+    { id: "page1", label: "第 1 页", lyrics: "东方红，太阳升" },
+    { id: "page2", label: "第 2 页", lyrics: "中国出了个毛泽东" },
+    { id: "page3", label: "第 3 页", lyrics: "他为人民谋幸福，呼儿" },
+    { id: "page4", label: "第 4 页", lyrics: "嗨哟，他是人民大救星" }
+  ],
+  notes: [],
+  totalBeats: 34,
+  warnings: ["课堂按原谱四行旋律拆成 4 页，每页显示 4 个小节。"],
+  source: "human-curated"
+};
+refreshScoreDerivedData(DONGFANGHONG_SCORE);
+const gestureLibrary = [
+  { id: "rest_line", image: "assets/gestures/library/gesture-rest-line.svg", name: "休止横线", label: "双手画一条水平线，然后停住", scope: "universal", kind: "rest" },
+  { id: "arch", image: "assets/gestures/library/gesture-arch.png", name: "大拱形", label: "手臂举高，再轻轻落下", scope: "universal" },
+  { id: "valley", image: "assets/gestures/library/gesture-valley.png", name: "大山谷", label: "手臂落下，再慢慢举高", scope: "universal" },
+  { id: "accent_hold", image: "assets/gestures/library/gesture-accent-hold.png", name: "转折后保持", label: "抬高、落下，然后向前伸展", scope: "universal" },
+  { id: "circle", image: "assets/gestures/library/gesture-circle.png", name: "大圆圈", label: "用整条手臂画一个大圆圈", scope: "universal" },
+  { id: "wave", image: "assets/gestures/library/gesture-wave.png", name: "大波浪", label: "手臂连续画两个大波浪", scope: "universal" },
+  { id: "infinity", image: "assets/gestures/library/gesture-infinity.png", name: "无穷形", label: "从左侧开口出发，穿过中间画完两边", scope: "universal" },
+  { id: "hold", image: "assets/gestures/library/gesture-hold.png", name: "平稳延伸", label: "手臂平稳向旁边移动", scope: "universal", difficulty: "support" },
+  { id: "rise", image: "assets/gestures/library/gesture-rise.png", name: "慢慢升高", label: "手臂从低处慢慢举高", scope: "universal", difficulty: "support" },
+  { id: "fall", image: "assets/gestures/library/gesture-fall.png", name: "慢慢落下", label: "手臂从高处慢慢放低", scope: "universal", difficulty: "support" },
+  { id: "climb_arcs_three", image: "assets/gestures/library/gesture-climb-arcs-three.svg?v=3", name: "三拍上行拱线", label: "一拍一个，连续画三个向上走的小拱线", scope: "3/4" },
+  { id: "descend_arcs_three", image: "assets/gestures/library/gesture-descend-arcs-three.svg?v=3", name: "三拍下行拱线", label: "一拍一个，连续画三个向下走的小拱线", scope: "3/4" },
+  { id: "waltz_sway", image: "assets/gestures/library/gesture-waltz-sway.png", name: "三拍摇摆", label: "第一拍落下，第二拍展开，第三拍轻轻回来", scope: "3/4" },
+  { id: "three_beat_sweep", image: "assets/gestures/library/gesture-three-beat-sweep.png", name: "三拍大回旋", label: "向下、向外，再向上收回", scope: "3/4" },
+  { id: "three_petal", image: "assets/gestures/library/gesture-three-petal.png", name: "三叶花", label: "从下方开口出发，连续画出三片大花瓣", scope: "3/4" },
+  { id: "spiral", image: "assets/gestures/library/gesture-spiral.png", name: "大螺旋", label: "从大圆慢慢收到中心", scope: "3/4" },
+  { id: "three_peaks", image: "assets/gestures/library/gesture-three-peaks.png", name: "三峰皇冠", label: "每一拍向上伸展一次，共做三次", scope: "3/4" },
+  { id: "triangle", image: "assets/gestures/library/gesture-triangle.png", name: "三角形", label: "跟着三拍向上、转弯，再回到起点", scope: "3/4" },
+  { id: "climb_arcs", image: "assets/gestures/library/gesture-climb-arcs.png", name: "四拍上行拱线", label: "一拍一个，连续画四个向上走的小拱线", scope: "4/4" },
+  { id: "descend_arcs", image: "assets/gestures/library/gesture-descend-arcs.png", name: "四拍下行拱线", label: "一拍一个，连续画四个向下走的小拱线", scope: "4/4" },
+  { id: "bounces", image: "assets/gestures/library/gesture-bounces.png", name: "四个弹跳", label: "跟着四拍画四个大拱线", scope: "4/4" },
+  { id: "square", image: "assets/gestures/library/gesture-square.png", name: "正方形", label: "跟着四拍画一个大方框", scope: "4/4" },
+  { id: "pulses", image: "assets/gestures/library/gesture-pulses.png", name: "四个短点", label: "跟着四拍轻轻点四下", scope: "4/4", difficulty: "support" }
+];
+const defaultCarmenAnalysis = [
+  { bars: [1, 2], mode: "merged", gestureIds: ["climb_arcs_three"], reason: "固定演示正在载入卡门手势方案。", start: 2.089, end: 4.944, beatTimes: [2.089, 3.041, 3.992], gestureTimings: [{ start: 2.089, end: 4.944, beatTimes: [2.089, 3.041, 3.992] }], curated: true }
+];
+
+function gestureById(id) {
+  return gestureLibrary.find(gesture => gesture.id === id) || gestureLibrary[0];
+}
+
+function gestureScopeLabel(scope) {
+  return scope === "3/4" ? "3/4 专用" : scope === "4/4" ? "4/4 专用" : "所有拍号通用";
+}
+
+const dogStateAssets = {
+  ready: "assets/stickers/states/performer-dog-ready.png",
+  clap: "assets/stickers/states/performer-dog-clap.png",
+  patThighs: "assets/stickers/states/performer-dog-pat-thighs.png",
+  stop: "assets/stickers/states/performer-dog-stop.png",
+  highFive: "assets/stickers/states/performer-dog-high-five.png"
+};
 
 const animals = {
   dog: { emoji: "🐶", name: "小狗", role: "鼓" },
   rabbit: { emoji: "🐰", name: "小兔", role: "唱名" },
   bear: { emoji: "🐻", name: "小熊", role: "键盘" },
   cat: { emoji: "🐱", name: "小猫", role: "贝斯" },
-  lion: { emoji: "🦁", name: "小狮子", role: "小号" }
+  lion: { emoji: "🦁", name: "小狮子", role: "萨克斯" }
+};
+
+const grooves = {
+  steady: { name: "稳稳走", emoji: "👣", hint: "一步一步，稳稳地走", bpmOffset: 0 },
+  bounce: { name: "蹦蹦跳", emoji: "🟠", hint: "轻轻弹起来", bpmOffset: 12 },
+  sway: { name: "摇一摇", emoji: "🌿", hint: "像风一样左右摇", bpmOffset: -8 },
+  forward: { name: "向前冲", emoji: "🚲", hint: "带着力量向前走", bpmOffset: 8 }
 };
 
 const moods = {
   happy: { name: "开心", emoji: "☀️", hint: "像阳光跳进窗户", postcardLine: "我的音乐像阳光跳进窗户。", className: "mood-happy", bpm: 96, notes: [261.6, 329.6, 392, 523.3] },
-  calm: { name: "安静", emoji: "🌙", hint: "留一点呼吸和空白", postcardLine: "我的音乐想慢慢走一会儿。", className: "mood-calm", bpm: 76, notes: [220, 261.6, 329.6, 392] },
+  calm: { name: "放松", emoji: "🌙", hint: "留一点呼吸和空白", postcardLine: "我的音乐想慢慢走一会儿。", className: "mood-calm", bpm: 76, notes: [220, 261.6, 329.6, 392] },
   brave: { name: "勇敢", emoji: "🔥", hint: "让每一下都站得稳", postcardLine: "我的音乐准备好向前走啦！", className: "mood-brave", bpm: 88, notes: [196, 246.9, 293.7, 392] },
   miss: { name: "想念", emoji: "⭐", hint: "把远方放进旋律里", postcardLine: "我的音乐想飞去远方看一看。", className: "mood-miss", bpm: 72, notes: [220, 293.7, 329.6, 440] }
 };
@@ -27,45 +259,182 @@ function escapeHtml(value) {
   })[character]);
 }
 
-function hasSavedPostcard() {
+function loadSavedPostcard() {
   try {
-    return Boolean(localStorage.getItem("animal-music-postcard"));
+    const saved = JSON.parse(localStorage.getItem("animal-music-postcard") || "null");
+    return saved && typeof saved === "object" ? saved : null;
   } catch {
-    return false;
+    return null;
   }
 }
 
+function loadSavedScoreSession() {
+  try {
+    const saved = JSON.parse(localStorage.getItem("animal-music-score-session") || "null");
+    return saved && saved.draft && Array.isArray(saved.draft.measures) ? saved : null;
+  } catch {
+    return null;
+  }
+}
+
+const savedPostcard = loadSavedPostcard();
+const savedScoreSession = loadSavedScoreSession();
+const savedHasVoice = typeof savedPostcard?.voiceDataUrl === "string" && savedPostcard.voiceDataUrl.startsWith("data:audio/");
+const savedSections = Array.isArray(savedPostcard?.sections) && savedPostcard.sections.length === 4
+  ? savedPostcard.sections.map(section => Array.isArray(section)
+    ? section.filter(sticker => arrangementAnimals.includes(sticker) || (sticker === "voice" && savedHasVoice))
+    : ["dog"])
+  : [["dog"], ["dog"], ["dog"], ["dog"]];
+
 const state = {
   screen: "home",
-  mood: null,
-  warmPattern: [0, 1, 2, 3],
-  recordHits: [0, 2],
-  isRecording: false,
+  mood: Object.hasOwn(moods, savedPostcard?.mood) ? savedPostcard.mood : null,
+  groove: Object.hasOwn(grooves, savedPostcard?.groove) ? savedPostcard.groove : null,
+  feelMode: "melody",
+  solfegeMode: "listen",
+  solfegePhraseIndex: 0,
+  solfegePlayingFull: false,
+  solfegeSource: "piano",
+  solfegeRecordingOpen: false,
+  solfegeRecordTargetIndex: 0,
+  solfegeRecordStatus: "idle",
+  solfegeRecordings: {},
+  solfegeRecordingsReady: false,
+  lessonMeasure: 0,
+  classPlaying: false,
+  swanSection: 0,
+  swanProgress: 0,
+  teacherStep: "input",
+  teacherMode: "hub",
+  scoreStep: savedScoreSession?.draft ? (savedScoreSession.scorePublished ? "published" : "review") : "input",
+  scoreFileName: savedScoreSession?.fileName || "",
+  scoreImageUrl: savedScoreSession?.imageUrl || "",
+  scoreImageDataUrl: savedScoreSession?.imageDataUrl || "",
+  scoreDraft: savedScoreSession?.draft || null,
+  scoreError: "",
+  scoreReviewMeasureIndex: Number(savedScoreSession?.reviewMeasureIndex) || 0,
+  scoreConfirmedMeasures: savedScoreSession?.confirmedMeasures || {},
+  publishedSolfegeLesson: savedScoreSession?.publishedLesson || structuredClone(DONGFANGHONG_SCORE),
+  scorePublished: Boolean(savedScoreSession?.scorePublished),
+  teacherAnalysisProgress: { percent: 0, label: "准备读取音频", detail: "" },
+  teacherFileName: "",
+  teacherAnalysisMeta: { meter: "3/4", bpm: 123, measureCount: 92, method: "固定演示课程", confidence: 1, secondsPerMeasure: 2.85, barsPerGesture: 2, gesturePacing: "快速 · 2 小节完成 1 个手势" },
+  teacherAnalysis: defaultCarmenAnalysis.map(group => ({ ...group, gestureIds: [...group.gestureIds] })),
+  publishedTeacherAnalysis: defaultCarmenAnalysis.map(group => ({ ...group, gestureIds: [...group.gestureIds] })),
+  publishedLessonTitle: CARMEN_TITLE,
+  publishedLessonAudioUrl: CARMEN_AUDIO,
+  publishedLessonMeter: "3/4",
+  publishedLessonStart: 2.089,
+  publishedLessonEnd: 130.44,
+  teacherEditing: null,
+  teacherPublished: false,
+  packPreviewing: false,
+  playbackRate: 1,
+  bodyLessonIndex: 0,
+  bodyPlaybackMode: null,
+  bodyRecording: { status: "empty", audioUrl: null, blob: null },
+  bodyRecordings: {},
+  bodyRecordingsReady: false,
+  dogRhythmSource: savedPostcard?.dogRhythmSource === "custom" ? "custom" : "system",
+  voice: savedHasVoice
+    ? { status: "ready", audioUrl: savedPostcard.voiceDataUrl, blob: null }
+    : { status: "empty", audioUrl: null, blob: null },
   selectedAnimal: null,
-  sections: [
-    ["dog"], ["dog"], ["dog"], ["dog"]
-  ],
+  sections: savedSections,
   playingSection: null,
   stageOpen: false,
   stageSection: 0,
   stageCompleted: false,
   stageEntering: [],
   stageLeaving: [],
+  performancePreparing: false,
   version: "ai",
-  title: "写给远方的星星",
-  message: "想把今天做的音乐送给你。",
-  saved: hasSavedPostcard(),
+  title: typeof savedPostcard?.title === "string" ? savedPostcard.title : "写给远方的星星",
+  message: typeof savedPostcard?.message === "string" ? savedPostcard.message : "想把今天做的音乐送给你。",
+  saved: Boolean(savedPostcard),
   modal: null
 };
 
 let audioContext;
 let timers = [];
 let micStream;
-let analyser;
-let micFrame;
-let recordStartedAt = 0;
-let lastMicHit = 0;
+let mediaRecorder;
 let stageMotionTimer;
+let activeVoiceAudio;
+let activeStemAudios = [];
+let activeSolfegeAudios = [];
+let activeSolfegeNodes = [];
+let activePreviewAudio;
+let activeSwanAudio;
+let activeSwanFrame;
+const swanGestureImageCache = new Map();
+let activeBodyAudio;
+let teacherAudioFile;
+let teacherAudioPreviewUrl = CARMEN_AUDIO;
+let teacherPreviewMarkedGroup = -1;
+let teacherScoreFile;
+let shouldAnimateScreen = true;
+
+function currentPackId() {
+  const feeling = state.mood === "miss" ? "longing" : (state.mood || "happy");
+  return `${feeling}_${state.groove || "steady"}`;
+}
+
+function bodyLesson() {
+  return BODY_LESSONS[Math.max(0, Math.min(BODY_LESSONS.length - 1, state.bodyLessonIndex))];
+}
+
+function musicPath(relativePath) {
+  return `${MUSIC_ROOT}/${currentPackId()}/v01/${relativePath}`;
+}
+
+function bodyMusicPath(lesson, relativePath) {
+  return `${MUSIC_ROOT}/${lesson.id}/v01/${relativePath}`;
+}
+
+function stopMusicAudio() {
+  activeStemAudios.forEach(audio => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
+  activeStemAudios = [];
+  activePreviewAudio?.pause();
+  activePreviewAudio = null;
+  activeSolfegeAudios.forEach(audio => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
+  activeSolfegeAudios = [];
+  state.packPreviewing = false;
+}
+
+function stopBodyPlayback() {
+  activeBodyAudio?.pause();
+  if (activeBodyAudio) activeBodyAudio.currentTime = 0;
+  activeBodyAudio = null;
+  state.bodyPlaybackMode = null;
+  if (state.screen === "feel-body") {
+    document.querySelectorAll("[data-body-step]").forEach(step => step.classList.remove("active"));
+  }
+}
+
+function stopSwanMelody({ reset = false } = {}) {
+  cancelAnimationFrame(activeSwanFrame);
+  activeSwanFrame = null;
+  activeSwanAudio?.pause();
+  activeSwanAudio = null;
+  state.classPlaying = false;
+  if (reset) state.swanProgress = 0;
+}
+
+function warmMusicPack() {
+  if (!state.mood || !state.groove) return;
+  ["preview/mix.wav", ...stemAnimals.map(animal => `stems/${animal}.wav`)].forEach(relativePath => {
+    const audio = new Audio(musicPath(relativePath));
+    audio.preload = "auto";
+    audio.load();
+  });
+}
 
 function getAudioContext() {
   audioContext ??= new (window.AudioContext || window.webkitAudioContext)();
@@ -111,6 +480,60 @@ function tone(frequency, duration = 0.18, volume = 0.12, type = "sine") {
   oscillator.stop(ctx.currentTime + duration);
 }
 
+function stopSolfegeNodes() {
+  activeSolfegeNodes.forEach(node => {
+    try { node.stop(); } catch {}
+  });
+  activeSolfegeNodes = [];
+}
+
+function schedulePianoNote(frequency, when, duration, volume = 0.16) {
+  const ctx = getAudioContext();
+  const gain = ctx.createGain();
+  const body = ctx.createOscillator();
+  const shimmer = ctx.createOscillator();
+  body.type = "triangle";
+  shimmer.type = "sine";
+  body.frequency.setValueAtTime(frequency, when);
+  shimmer.frequency.setValueAtTime(frequency * 2, when);
+  gain.gain.setValueAtTime(0.0001, when);
+  gain.gain.exponentialRampToValueAtTime(volume, when + 0.012);
+  gain.gain.exponentialRampToValueAtTime(Math.max(0.045, volume * 0.58), when + Math.min(0.14, duration * 0.3));
+  gain.gain.setValueAtTime(Math.max(0.04, volume * 0.5), when + Math.max(0.16, duration * 0.78));
+  gain.gain.exponentialRampToValueAtTime(0.0001, when + duration);
+  body.connect(gain);
+  shimmer.connect(gain);
+  gain.connect(ctx.destination);
+  body.start(when);
+  shimmer.start(when);
+  body.stop(when + duration + 0.02);
+  shimmer.stop(when + duration + 0.02);
+  activeSolfegeNodes.push(body, shimmer);
+}
+
+function playSolfegeSample(syllable, frequency, duration = 0.34, volume = 0.18) {
+  const voiceRoot = fixedDemoAsset("solfegeLesson", "voiceRoot", SOLFEGE_ROOT);
+  const audio = new Audio(`${voiceRoot}/${syllable}.wav`);
+  const sourceFrequency = SOLFEGE_SOURCE_FREQUENCIES[syllable] || SOLFEGE_SOURCE_FREQUENCIES.do;
+  audio.preload = "auto";
+  audio.volume = volume;
+  audio.playbackRate = Math.max(0.25, Math.min(4, frequency / sourceFrequency));
+  audio.preservesPitch = false;
+  audio.webkitPreservesPitch = false;
+  activeSolfegeAudios.push(audio);
+  const release = () => {
+    activeSolfegeAudios = activeSolfegeAudios.filter(item => item !== audio);
+  };
+  audio.addEventListener?.("ended", release, { once: true });
+  audio.play().catch(() => showToast("小兔唱名没有成功播放，请再试一次。"));
+  later(() => {
+    audio.pause();
+    audio.currentTime = 0;
+    release();
+  }, duration * 1000);
+  return audio;
+}
+
 function showToast(message) {
   toast.textContent = message;
   toast.classList.add("show");
@@ -119,30 +542,41 @@ function showToast(message) {
 
 function setScreen(screen) {
   clearTimers();
+  stopMusicAudio();
+  stopSwanMelody({ reset: true });
+  stopBodyPlayback();
+  activeVoiceAudio?.pause();
+  activeVoiceAudio = null;
   clearTimeout(stageMotionTimer);
-  if (screen !== "record" && micStream) stopMicrophone();
+  state.classPlaying = false;
+  if (screen !== "perform") state.performancePreparing = false;
+  if (!['record', 'feel-body'].includes(screen) && micStream) stopMicrophone();
   state.playingSection = null;
   state.stageOpen = false;
   state.stageCompleted = false;
   state.stageEntering = [];
   state.stageLeaving = [];
+  if (screen === "teacher" && state.screen !== "teacher") state.teacherMode = "hub";
   state.screen = screen;
+  shouldAnimateScreen = true;
   window.scrollTo({ top: 0, behavior: "smooth" });
   render();
 }
 
 function topbar(step = "") {
   if (state.screen === "home") return "";
+  const recordingBusy = (state.screen === "record" && ["countdown", "recording"].includes(state.voice.status))
+    || (state.screen === "feel-body" && ["countdown", "recording"].includes(state.bodyRecording.status));
   return `
     <header class="topbar">
-      <div class="topbar-side"><button class="button ghost" data-action="back" aria-label="返回上一步">← 返回</button></div>
+      <div class="topbar-side"><button class="button ghost" data-action="back" aria-label="返回上一步" ${recordingBusy ? "disabled" : ""}>← 返回</button></div>
       <div class="brand-mini">动物音乐</div>
       <div class="topbar-side"><span class="step-label">${step}</span></div>
     </header>`;
 }
 
 function band(className = "") {
-  const members = Object.entries(animals).map(([key]) => performerMarkup(key, `band-member band-${key}`)).join("");
+  const members = arrangementAnimals.map(key => performerMarkup(key, `band-member band-${key}`)).join("");
   return `<div class="band ${className}" aria-label="动物乐队">${members}</div>`;
 }
 
@@ -154,13 +588,22 @@ function performerMarkup(key, extraClass = "") {
   return `<span class="performer-art performer-${key} ${extraClass}" aria-hidden="true"></span>`;
 }
 
+function dogStateMarkup(stateName, extraClass = "", alt = "") {
+  return `<img class="dog-state ${extraClass}" src="${dogStateAssets[stateName]}" data-dog-state="${stateName}" alt="${alt}">`;
+}
+
 function render() {
+  persistScoreSession();
   const views = {
     home: renderHome,
-    classroom: renderClassroom,
-    classroomLesson: renderClassroomLesson,
+    teacher: renderTeacher,
+    feel: renderFeelMenu,
+    "feel-melody": renderFeelMelody,
+    "feel-body": renderFeelBody,
+    "feel-sing": renderFeelSing,
+    library: renderLibrary,
     mood: renderMood,
-    warmup: renderWarmup,
+    groove: renderGroove,
     record: renderRecord,
     arrange: renderArrange,
     processing: renderProcessing,
@@ -169,73 +612,736 @@ function render() {
     perform: renderPerform
   };
   app.innerHTML = views[state.screen]();
+  if (state.screen === "teacher" && state.teacherMode === "hub") {
+    app.querySelector(".teacher-platform-hero h2")?.remove();
+    app.querySelector(".teacher-platform-hero .lead")?.remove();
+    app.querySelectorAll(".teacher-platform-card .teacher-platform-target, .teacher-platform-card small, .teacher-platform-flow").forEach((element) => element.remove());
+  }
+  app.querySelector(".screen")?.classList.toggle("screen-arrive", shouldAnimateScreen);
+  shouldAnimateScreen = false;
   bindEvents();
+}
+
+function persistScoreSession() {
+  try {
+    if (!state.scoreDraft) {
+      localStorage.removeItem("animal-music-score-session");
+      return;
+    }
+    const session = {
+      draft: state.scoreDraft,
+      fileName: state.scoreFileName,
+      imageUrl: state.scoreImageUrl?.startsWith("blob:") ? "" : state.scoreImageUrl,
+      imageDataUrl: state.scoreImageDataUrl || "",
+      scorePublished: state.scorePublished,
+      publishedLesson: state.scorePublished ? state.publishedSolfegeLesson : null,
+      reviewMeasureIndex: state.scoreReviewMeasureIndex,
+      confirmedMeasures: state.scoreConfirmedMeasures
+    };
+    try {
+      localStorage.setItem("animal-music-score-session", JSON.stringify(session));
+    } catch {
+      session.imageDataUrl = "";
+      localStorage.setItem("animal-music-score-session", JSON.stringify(session));
+    }
+  } catch {}
 }
 
 function renderHome() {
   return `
     <section class="screen">
-      <div class="hero">
-        <p class="eyebrow">每一次创造，都值得被回应</p>
-        <h1>拍一拍，做一首<br>你的音乐</h1>
-        <p class="lead">叫上动物朋友，把今天的感觉变成一张音乐明信片。</p>
-      </div>
-      ${band()}
-      <div class="actions"><button class="button primary" data-go="mood">开始创作</button></div>
-      <div class="home-links">
-        <button class="small-card" data-go="classroom"><span>🥁</span>教师音乐课堂</button>
-        <button class="small-card" data-action="library"><span>💌</span>我的音乐明信片</button>
+      <button class="teacher-corner" data-go="teacher">教师备课</button>
+      <div class="hero"><h1>动物音乐</h1><p class="lead">和音乐一起感受，也把你的声音放进作品里。</p></div>
+      <div class="home-entry-grid">
+        <button class="home-entry feel-entry" data-go="feel"><img class="entry-art" src="assets/stickers/home-feel.png" alt=""><strong>感受</strong><small>画旋律 · 身体演奏 · 唱唱名</small></button>
+        <button class="home-entry create-entry" data-go="mood"><img class="entry-art" src="assets/stickers/home-create.png" alt=""><strong>创作</strong><small>贴纸编排我的音乐</small></button>
       </div>
     </section>`;
 }
 
-function melodyContour() {
-  return `<div class="melody-card" aria-label="旋律高低线条">
+function renderTeacherHub() {
+  const analysisStatus = state.teacherPublished
+    ? "已有课堂方案，可继续查看或修改"
+    : state.teacherFileName
+      ? `已选择：${escapeHtml(state.teacherFileName)}`
+      : "上传音乐，自动分析节拍、小节与旋律";
+  const scoreStatus = state.scorePublished
+    ? `已发布：${escapeHtml(state.publishedSolfegeLesson.title)}`
+    : state.scoreFileName
+      ? `待确认：${escapeHtml(state.scoreFileName)}`
+      : "上传简谱图片，生成首调唱名教学";
+  return `${topbar("教师备课平台")}<section class="screen classroom-screen teacher-platform-screen">
+    <div class="teacher-platform-hero">
+      <p class="eyebrow">统一备课工作台</p>
+      <h2>一处准备“感受”和“创作”的音乐内容</h2>
+      <p class="lead">选择要准备的课堂模块。两项工作彼此独立，完成的内容会分别进入对应的儿童端功能。</p>
+    </div>
+    <div class="teacher-platform-grid">
+      <button class="teacher-platform-card analysis-card" data-action="open-teacher-analysis">
+        <span class="teacher-platform-icon" aria-hidden="true">♫</span>
+        <span class="teacher-platform-target">支持儿童端 · 感受</span>
+        <strong>歌曲分析</strong>
+        <p>上传一首音乐，自动识别节拍、小节和旋律轮廓，并匹配画旋律手势。</p>
+        <small>${analysisStatus}</small>
+        <b>${state.teacherPublished ? "查看歌曲方案" : "进入歌曲分析"} →</b>
+      </button>
+      <button class="teacher-platform-card creation-card" data-action="open-teacher-creation">
+        <span class="teacher-platform-icon" aria-hidden="true">✦</span>
+        <span class="teacher-platform-target">支持儿童端 · 创作</span>
+        <strong>贴纸旋律创作</strong>
+        <p>进入儿童音乐设计台，为动物贴纸制作旋律、试听编配，并保存正式音乐资源。</p>
+        <small>儿童音乐设计台已接入</small>
+        <b>进入旋律创作 →</b>
+      </button>
+      <button class="teacher-platform-card solfege-analysis-card" data-action="open-teacher-solfege">
+        <span class="teacher-platform-icon" aria-hidden="true">1</span>
+        <span class="teacher-platform-target">支持儿童端 · 感受 · 唱唱名</span>
+        <strong>乐谱生成唱名教学</strong>
+        <p>上传简谱后由模型预生成草稿，再逐小节人工校对，最终生成钢琴与唱名课堂。</p>
+        <small>${scoreStatus}</small>
+        <b>${state.scorePublished ? "查看唱名方案" : "进入乐谱识别"} →</b>
+      </button>
+    </div>
+    <div class="teacher-platform-flow"><span>歌曲分析 <b>→ 画旋律</b></span><i></i><span>乐谱识别 <b>→ 唱唱名</b></span><i></i><span>贴纸旋律创作 <b>→ 创作</b></span></div>
+  </section>`;
+}
+
+function renderTeacherCreation() {
+  return `${topbar("教师备课 · 贴纸旋律创作")}<section class="screen classroom-screen teacher-studio-screen">
+    <div class="teacher-studio-head">
+      <div><p class="eyebrow">支持儿童端 · 创作</p><h2>贴纸旋律创作</h2><p class="lead">使用儿童音乐设计台完成旋律设计、试听、分轨和保存。保存后的资源用于儿童端贴纸创作。</p></div>
+      <button class="button secondary" data-action="teacher-hub">返回备课首页</button>
+    </div>
+    <div class="teacher-studio-notice">
+      <div><strong>儿童音乐设计台</strong><small>如下面没有显示工作台，请先运行“启动儿童音乐设计台.cmd”。</small></div>
+      <a class="button ghost" href="${CHILDREN_MUSIC_STUDIO_URL}" target="_blank" rel="noopener">在独立窗口打开</a>
+    </div>
+    <iframe class="teacher-studio-frame" src="${CHILDREN_MUSIC_STUDIO_URL}" title="儿童音乐设计台" loading="lazy"></iframe>
+  </section>`;
+}
+
+function scoreDurationLabel(duration) {
+  if (duration === 0.125) return "⅛拍";
+  if (duration === 0.25) return "¼拍";
+  if (duration === 0.375) return "⅜拍";
+  if (duration === 0.5) return "½拍";
+  if (duration === 0.75) return "¾拍";
+  if (duration === 1) return "1拍";
+  if (duration === 1.5) return "1½拍";
+  if (duration === 2) return "2拍";
+  if (duration === 3) return "3拍";
+  if (duration === 4) return "4拍";
+  return `${duration}拍`;
+}
+
+function scoreReviewGroups(score) {
+  const groups = [];
+  let pickup = null;
+  score.measures.forEach((measure, measureIndex) => {
+    if (measure.pickup) {
+      pickup = { measure, measureIndex };
+      return;
+    }
+    groups.push({
+      number: measure.number,
+      pickup,
+      main: { measure, measureIndex },
+      measureIndexes: pickup ? [pickup.measureIndex, measureIndex] : [measureIndex]
+    });
+    pickup = null;
+  });
+  return groups;
+}
+
+function scoreReviewGroupIndexForMeasure(score, measureIndex) {
+  return scoreReviewGroups(score).findIndex(group => group.measureIndexes.includes(measureIndex));
+}
+
+function invalidateScoreReviewGroup(measureIndex) {
+  if (!state.scoreDraft) return;
+  const groupIndex = scoreReviewGroupIndexForMeasure(state.scoreDraft, measureIndex);
+  if (groupIndex >= 0) delete state.scoreConfirmedMeasures[groupIndex];
+}
+
+function scoreMeasureBeatTotal(measure) {
+  return Number(measure.notes.reduce((sum, note) => sum + Number(note.duration || 0), 0).toFixed(3));
+}
+
+function scoreExpectedMeasureBeats(score, measure) {
+  if (measure.pickup) return Number(measure.beats) || scoreMeasureBeatTotal(measure);
+  return score.meter.beats * 4 / score.meter.unit;
+}
+
+function scoreReviewGroupMeasures(group) {
+  return [group.pickup, group.main].filter(Boolean);
+}
+
+function scoreReviewGroupNotes(group) {
+  return scoreReviewGroupMeasures(group).flatMap(item => item.measure.notes.map((note, noteIndex) => ({ ...item, note, noteIndex })));
+}
+
+function scoreReviewGroupBeatTotal(group) {
+  return Number(scoreReviewGroupMeasures(group).reduce((sum, item) => sum + scoreMeasureBeatTotal(item.measure), 0).toFixed(3));
+}
+
+function scoreReviewGroupExpectedBeats(score, group) {
+  return Number(scoreReviewGroupMeasures(group).reduce((sum, item) => sum + scoreExpectedMeasureBeats(score, item.measure), 0).toFixed(3));
+}
+
+function scoreReviewGroupRhythmPatterns(score, group) {
+  const notes = scoreReviewGroupNotes(group);
+  const count = notes.length;
+  const expected = scoreReviewGroupExpectedBeats(score, group);
+  const current = notes.map(item => item.note.duration);
+  const byCount = expected === 3 ? {
+    1: [[3]],
+    2: [[1.5, 1.5], [2, 1], [1, 2]],
+    3: [[1, 1, 1], [1, 1.5, .5], [1, .5, 1.5]],
+    4: [[1, .5, .5, 1], [.5, .5, 1, 1]]
+  } : {
+    1: [[2]],
+    2: [[1, 1], [1.5, .5], [.5, 1.5]],
+    3: [[1, .5, .5], [.5, .5, 1], [.5, 1, .5]],
+    4: [[.5, .5, .5, .5]]
+  };
+  const options = byCount[count] || (count ? [Array(count).fill(Number((expected / count).toFixed(3)))] : []);
+  if (current.length && !options.some(pattern => pattern.join(",") === current.join(","))) options.unshift(current);
+  return options;
+}
+
+function scoreRhythmPatterns(measure) {
+  if (measure.pickup) return [measure.notes.map(note => note.duration)];
+  const patterns = {
+    1: [[2]],
+    2: [[1, 1], [1.5, .5], [.5, 1.5]],
+    3: [[1, .5, .5], [.5, .5, 1], [.5, 1, .5]],
+    4: [[.5, .5, .5, .5]]
+  };
+  const options = patterns[measure.notes.length] || [];
+  const current = measure.notes.map(note => note.duration);
+  if (!options.some(pattern => pattern.join(",") === current.join(","))) options.unshift(current);
+  return options;
+}
+
+function renderScoreRhythmPreview(measure, pattern) {
+  return pattern.map((duration, index) => {
+    const note = measure.notes[index];
+    const degree = note?.degree || 0;
+    const dotted = duration === .75 || duration === 1.5;
+    return `<span class="score-rhythm-symbol ${jianpuDurationClass(duration)}"><b>${degree}${dotted ? "·" : ""}</b>${duration >= 2 ? "—" : ""}</span>`;
+  }).join("");
+}
+
+function renderScorePitchOptions(note) {
+  const groups = [
+    { octave: -1, label: "低音（数字下方有点）", prefix: "低音" },
+    { octave: 0, label: "中音", prefix: "中音" },
+    { octave: 1, label: "高音（数字上方有点）", prefix: "高音" }
+  ];
+  const restSelected = note.degree === 0 ? "selected" : "";
+  return `<option value="0:0" ${restSelected}>休止</option>${groups.map(group => `<optgroup label="${group.label}">${Array.from({ length: 7 }, (_, index) => {
+    const degree = index + 1;
+    const selected = note.degree === degree && note.octave === group.octave ? "selected" : "";
+    return `<option value="${degree}:${group.octave}" ${selected}>${group.prefix} ${degree}</option>`;
+  }).join("")}</optgroup>`).join("")}`;
+}
+
+function renderScoreDurationOptions(note) {
+  const options = [
+    [.25, "¼拍"], [.5, "½拍"], [.75, "¾拍"],
+    [1, "1拍"], [1.5, "1½拍"], [2, "2拍"], [3, "3拍"], [4, "4拍"]
+  ];
+  return options.map(([duration, label]) => `<option value="${duration}" ${Number(note.duration) === duration ? "selected" : ""}>${label}</option>`).join("");
+}
+
+function renderScoreDurationHelp() {
+  return `<details class="score-duration-help">
+    <summary>怎么看音符长度？</summary>
+    <div class="score-duration-guide">
+      <span><b class="duration-demo quarter">5</b><small>¼拍<br>数字下两横</small></span>
+      <span><b class="duration-demo eighth">5</b><small>½拍<br>数字下一横</small></span>
+      <span><b class="duration-demo dotted-eighth">5·</b><small>¾拍<br>下一横＋右侧点</small></span>
+      <span><b class="duration-demo">5</b><small>1拍<br>普通数字</small></span>
+      <span><b class="duration-demo">5·</b><small>1½拍<br>数字右侧点</small></span>
+      <span><b class="duration-demo">5 —</b><small>2拍<br>后面一横</small></span>
+    </div>
+  </details>`;
+}
+
+function renderScoreNotes(measure, measureIndex) {
+  return measure.notes.map((note, noteIndex) => {
+    const confidence = Math.round((note.confidence || 0) * 100);
+    return `<div class="score-note ${confidence < 72 ? "needs-check" : ""}" data-score-note="${measureIndex}-${noteIndex}">
+      <select class="score-pitch-select" data-score-pitch data-measure="${measureIndex}" data-note="${noteIndex}" aria-label="第 ${measure.number} 小节第 ${noteIndex + 1} 个音的音高">${renderScorePitchOptions(note)}</select>
+      <label class="score-duration-field"><span>长度</span><select data-score-duration data-measure="${measureIndex}" data-note="${noteIndex}" aria-label="这个音符的长度">${renderScoreDurationOptions(note)}</select></label>
+      <input class="score-note-lyric" data-score-lyric data-measure="${measureIndex}" data-note="${noteIndex}" value="${escapeHtml(note.lyric || "")}" placeholder="歌词" aria-label="这个音对应的歌词">
+      <button type="button" class="score-note-delete" data-score-delete-note data-measure="${measureIndex}" data-note="${noteIndex}" aria-label="删除这个音符">删除</button>
+      ${confidence < 72 ? `<i title="模型把握度较低">请核对</i>` : ""}
+    </div>`;
+  }).join("");
+}
+
+function renderScoreReviewGroup(score, group, groupIndex) {
+  const measure = group.main.measure;
+  const measureIndex = group.main.measureIndex;
+  return `<article class="score-measure-card">
+    <div class="score-measure-head"><strong>第 ${group.number} 小节</strong><span class="score-review-state ${state.scoreConfirmedMeasures[groupIndex] ? "done" : ""}">${state.scoreConfirmedMeasures[groupIndex] ? "已确认" : "待确认"}</span></div>
+    <div class="score-note-row score-grouped-notes">${group.pickup ? renderScoreNotes(group.pickup.measure, group.pickup.measureIndex) : ""}${renderScoreNotes(measure, measureIndex)}<button type="button" class="score-add-note" data-score-add-note data-measure="${measureIndex}">＋ 添加音符</button></div>
+    ${renderScoreDurationHelp()}
+  </article>`;
+}
+
+function renderScoreLivePreview(score, groups) {
+  const measures = groups.map((group, groupIndex) => {
+    const notes = scoreReviewGroupNotes(group).map(item => renderJianpuNote(item.note, score)).join("");
+    return `<button type="button" class="score-preview-measure ${groupIndex === state.scoreReviewMeasureIndex ? "active" : ""}" data-score-preview-measure="${groupIndex}" aria-label="编辑第 ${group.number} 小节">
+      <small>${group.number}</small><div>${notes || `<span class="score-empty-measure">暂无音符</span>`}</div>
+    </button>`;
+  }).join("");
+  return `<section class="score-live-preview" aria-label="实时简谱预览">
+    <div class="score-live-preview-head"><div><strong>当前简谱</strong><small>修改音高、长度或歌词后会立即更新</small></div><span>点击小节可编辑</span></div>
+    <div class="score-preview-grid">${measures}</div>
+  </section>`;
+}
+
+function renderTeacherScore() {
+  if (state.scoreStep === "analyzing") {
+    return `${topbar("教师备课 · 唱名教学")}<section class="screen classroom-screen">
+      <div class="teacher-analysis-loading">${avatarMarkup("rabbit", "analysis-rabbit")}<p class="eyebrow">模型正在读取 ${escapeHtml(state.scoreFileName)}</p><h2>生成可核对的乐谱草稿</h2><div class="teacher-progress" role="progressbar" aria-valuenow="62"><i style="width:62%"></i></div><strong class="teacher-progress-number">识别中</strong><div class="analysis-checks"><span class="done">划分乐谱行和小节</span><span class="done">识别数字与歌词</span><span>标记需要人工核对的位置</span></div><p class="helper">模型只负责预填，不会直接生成课堂内容。</p></div>
+    </section>`;
+  }
+
+  if ((state.scoreStep === "review" || state.scoreStep === "published") && state.scoreDraft) {
+    const score = state.scoreDraft;
+    const meter = `${score.meter.beats}/${score.meter.unit}`;
+    const groups = scoreReviewGroups(score);
+    state.scoreReviewMeasureIndex = Math.max(0, Math.min(groups.length - 1, state.scoreReviewMeasureIndex));
+    const currentGroup = groups[state.scoreReviewMeasureIndex];
+    const groupBeatTotal = scoreReviewGroupBeatTotal(currentGroup);
+    const groupExpectedBeats = scoreReviewGroupExpectedBeats(score, currentGroup);
+    const measureValid = Math.abs(groupBeatTotal - groupExpectedBeats) < .001;
+    const confirmedCount = groups.filter((_, index) => state.scoreConfirmedMeasures[index]).length;
+    const allConfirmed = confirmedCount === groups.length;
+    const measureNav = groups.map((group, index) => `<button class="${index === state.scoreReviewMeasureIndex ? "active" : ""} ${state.scoreConfirmedMeasures[index] ? "done" : ""}" data-score-review-measure="${index}" aria-label="第 ${group.number} 小节">${state.scoreConfirmedMeasures[index] ? "✓" : group.number}</button>`).join("");
+    return `${topbar("教师备课 · 唱名教学")}<section class="screen classroom-screen teacher-score-review">
+      <div class="teacher-review-head score-simple-head"><div><p class="eyebrow">校对第 ${state.scoreReviewMeasureIndex + 1} / ${groups.length} 小节</p><h2>${escapeHtml(score.title)}</h2></div><button class="button ghost" data-action="reset-score">换乐谱</button></div>
+      ${renderScoreLivePreview(score, groups)}
+      <div class="score-review-layout">
+        <aside class="score-source-panel">${(state.scoreImageUrl || state.scoreImageDataUrl) ? `<img src="${state.scoreImageUrl || state.scoreImageDataUrl}" alt="上传的简谱原图">` : ""}<div><strong>原始乐谱</strong><small>${escapeHtml(state.scoreFileName)}</small></div></aside>
+        <div class="score-review-main">
+          <div class="score-compact-meta"><span>1 = ${escapeHtml(score.tonic)}</span><span>${meter} 拍</span><label>速度 <input data-score-bpm type="number" min="36" max="180" value="${score.bpm}"> BPM</label></div>
+          <div class="score-measure-navigator"><button class="button ghost" data-action="previous-score-measure" ${state.scoreReviewMeasureIndex === 0 ? "disabled" : ""}>←</button><div>${measureNav}</div><button class="button ghost" data-action="next-score-measure" ${state.scoreReviewMeasureIndex === groups.length - 1 ? "disabled" : ""}>→</button></div>
+          ${measureValid ? "" : `<div class="score-warning"><strong>长度需要调整</strong><p>当前合计 ${groupBeatTotal} 拍，应为 ${groupExpectedBeats} 拍。请修改音符长度。</p></div>`}
+          <div class="score-measure-list">${renderScoreReviewGroup(score, currentGroup, state.scoreReviewMeasureIndex)}</div>
+          <div class="score-review-actions"><button class="button secondary" data-action="preview-score-measure">▶ 试听这个小节</button><button class="button primary" data-action="confirm-score-measure" ${measureValid ? "" : "disabled"}>${state.scoreConfirmedMeasures[state.scoreReviewMeasureIndex] ? "已确认，继续下一节" : "确认这个小节"}</button></div>
+          <div class="score-publish-row"><span>${state.scorePublished ? "已生成唱名" : `已完成 ${confirmedCount}/${groups.length}`}</span><button class="button primary" data-action="publish-score" ${allConfirmed ? "" : "disabled"}>生成钢琴与唱名</button>${state.scorePublished ? `<button class="button secondary" data-go="feel-sing">打开唱名课堂</button>` : ""}</div>
+        </div>
+      </div>
+    </section>`;
+  }
+
+  return `${topbar("教师备课 · 唱名教学")}<section class="screen classroom-screen">
+    <div class="hero score-upload-hero"><p class="eyebrow">乐谱生成唱名</p><h2>上传乐谱，逐小节确认</h2><p class="lead">系统先预填，您只需对照原图修改。</p></div>
+    <div class="teacher-upload-shell score-upload-shell">
+      <div class="teacher-demo-song"><div><span class="lesson-tag">体验完整流程</span><strong>用《东方红》模拟模型预生成</strong><small>系统会故意标出几处需要人工确认的位置</small></div><button class="button primary" data-action="load-score-demo">生成识别草稿</button></div>
+      <label class="teacher-upload-zone" for="teacher-score-input"><span class="upload-mark">上传简谱</span><strong>${state.scoreFileName ? escapeHtml(state.scoreFileName) : "选择一张清晰的简谱图片"}</strong><small>${state.scoreFileName ? "图片已准备好，可以开始识别" : "第一版支持 PNG、JPG、WEBP、BMP；建议一张图只放一个主旋律声部"}</small><input id="teacher-score-input" data-score-file type="file" accept="image/png,image/jpeg,image/webp,image/bmp"></label>
+      ${(state.scoreImageUrl || state.scoreImageDataUrl) ? `<img class="score-upload-preview" src="${state.scoreImageUrl || state.scoreImageDataUrl}" alt="待分析的简谱">` : ""}
+      ${state.scoreError ? `<div class="score-error">${escapeHtml(state.scoreError)}</div>` : ""}
+      <button class="button secondary teacher-analyze-button" data-action="analyze-score" ${teacherScoreFile ? "" : "disabled"}>模型预生成</button>
+    </div>
+  </section>`;
+}
+
+function renderTeacher() {
+  if (state.teacherMode === "hub") return renderTeacherHub();
+  if (state.teacherMode === "creation") return renderTeacherCreation();
+  if (state.teacherMode === "solfege") return renderTeacherScore();
+  const fileName = state.teacherFileName || CARMEN_TITLE;
+  if (state.teacherStep === "analyzing") {
+    const progress = state.teacherAnalysisProgress;
+    return `${topbar("教师备课")}<section class="screen classroom-screen">
+    <div class="teacher-analysis-loading">${avatarMarkup("rabbit", "analysis-rabbit")}<p class="eyebrow">正在分析 ${escapeHtml(fileName)}</p><h2>${escapeHtml(progress.label)}</h2><div class="teacher-progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${progress.percent}"><i style="width:${progress.percent}%"></i></div><strong class="teacher-progress-number">${progress.percent}%</strong><p class="teacher-progress-detail">${escapeHtml(progress.detail)}</p><div class="analysis-checks"><span class="${progress.percent >= 30 ? "done" : ""}">识别节拍与小节</span><span class="${progress.percent >= 46 ? "done" : ""}">读取旋律走向</span><span class="${progress.percent >= 90 ? "done" : ""}">匹配手势图库</span></div><p class="helper">正在根据这次上传的音频逐小节生成；完成后仍需老师确认。</p></div>
+  </section>`;
+  }
+
+  if (state.teacherStep === "review" || state.teacherStep === "published") {
+    const meta = state.teacherAnalysisMeta;
+    const cards = state.teacherAnalysis.map((group, groupIndex) => teacherAnalysisCard(group, groupIndex)).join("");
+    return `${topbar("教师备课")}<section class="screen classroom-screen teacher-review-screen">
+      <div class="teacher-review-head"><div><p class="eyebrow">${state.teacherPublished ? "已确认的课堂方案" : meta.curated ? "内置课程方案 · 等待老师确认" : "音频分析完成 · 等待老师确认"}</p><h2>${escapeHtml(fileName)}</h2><p class="lead">已读取完整音频，并为 ${meta.measureCount} 个有音乐内容的小节生成手势。没有声音的小节不会匹配手势。</p></div><span class="lesson-tag">${meta.curated ? "老师编排 · " : "估算 "}${meta.meter} · ${Math.round(meta.bpm)} BPM</span></div>
+      ${teacherAudioPreviewUrl ? `<div class="teacher-audio-dock"><strong>试听并核对手势</strong><small>播放或拖动进度，下面会标出当前对应手势</small><audio class="teacher-audio-preview" data-teacher-preview controls src="${teacherAudioPreviewUrl}"></audio></div>` : ""}
+      ${renderMeterDecision(meta)}
+      <div class="teacher-review-list">${cards}</div>
+      ${state.teacherEditing ? renderTeacherGesturePicker() : ""}
+      <div class="teacher-publish-bar"><p>${state.teacherPublished ? "这份手势方案已经同步到感受课堂。" : "确认后，儿童端才会使用这份手势方案。"}</p><div class="button-row">${state.teacherPublished ? `<button class="button secondary" data-action="reopen-teacher-review">继续修改</button><button class="button primary" data-go="feel-melody">打开课堂预览</button>` : `<button class="button secondary" data-action="reset-teacher-song">换一首音乐</button><button class="button primary" data-action="publish-teacher-lesson">确认并用于课堂</button>`}</div></div>
+    </section>`;
+  }
+
+  return `${topbar("教师备课")}<section class="screen classroom-screen">
+    <div class="hero"><p class="eyebrow">教师备课工具</p><h2>上传一首音乐，建立课堂时间轴</h2><p class="lead">系统先分析节拍、小节和旋律轮廓，为画旋律、身体演奏和唱唱名准备共同的音乐基础。</p></div>
+    <div class="teacher-upload-shell">
+      <div class="teacher-demo-song"><div><span class="lesson-tag">内置课程演示</span><strong>${CARMEN_TITLE}</strong><small>音频已保存在 Demo 中，可直接生成 3/4 拍手势方案</small></div><button class="button primary" data-action="load-carmen-demo">直接分析《卡门》</button></div>
+      <label class="teacher-upload-zone" for="teacher-audio-input"><span class="upload-mark">上传音乐</span><strong>${state.teacherFileName ? escapeHtml(state.teacherFileName) : "选择一首音乐"}</strong><small>${state.teacherFileName ? "已经准备好，可以开始分析" : "支持 MP3、WAV、M4A 等常见音频；仅用于本次备课"}</small><input id="teacher-audio-input" data-teacher-file type="file" accept="audio/*"></label>
+      <button class="button primary teacher-analyze-button" data-action="analyze-teacher-song" ${state.teacherFileName ? "" : "disabled"}>开始音频分析</button>
+    </div>
+    <p class="teacher-safety-note">当前版本不调用 AI。系统自动确定节拍和小节，老师只需确认最终教学动作。</p>
+  </section>`;
+}
+
+function renderMeterDecision(meta) {
+  const confidence = Math.round((meta.meterConfidence || 0) * 100);
+  return `<div class="teacher-meter-decision"><div><strong>已自动识别：${escapeHtml(meta.meter)}</strong><small>系统根据全曲重拍结构自动决定 · 内部把握度 ${confidence}%</small></div><b>无需老师判断</b></div>`;
+}
+
+function pulseCountForMeter(meter = state.teacherAnalysisMeta?.meter) {
+  if (meter === "3/4") return 3;
+  if (meter === "6/8") return 2;
+  return 4;
+}
+
+function gestureTiming(group, slotIndex = 0) {
+  if (group.gestureTimings?.[slotIndex]) return group.gestureTimings[slotIndex];
+  const slotCount = group.mode === "merged" ? 1 : Math.max(1, group.gestureIds.length);
+  const duration = (group.end - group.start) / slotCount;
+  const start = group.start + duration * slotIndex;
+  const end = slotIndex === slotCount - 1 ? group.end : start + duration;
+  const measuresInSlot = group.mode === "merged" ? Math.max(1, group.bars[1] - group.bars[0] + 1) : 1;
+  const pulseCount = pulseCountForMeter() * measuresInSlot;
+  return {
+    start,
+    end,
+    beatTimes: Array.from({ length: pulseCount }, (_, index) => start + index * (end - start) / pulseCount)
+  };
+}
+
+function gestureBeatGuide(group, slotIndex = 0, meter = state.teacherAnalysisMeta?.meter) {
+  const timing = gestureTiming(group, slotIndex);
+  const pulsesPerMeasure = pulseCountForMeter(meter);
+  const dots = timing.beatTimes.map((_, beatIndex) => `<i data-gesture-beat="${beatIndex}" class="${beatIndex % pulsesPerMeasure === 0 ? "strong" : ""}"></i>`).join("");
+  return `<div class="gesture-beat-guide" aria-label="动作节拍点">${dots}</div>`;
+}
+
+function teacherAnalysisCard(group, groupIndex) {
+  const modeName = group.mode === "rest" ? "休止 · 水平线" : group.mode === "split" ? "分别呈现" : group.mode === "repeat" ? "相似小节 · 重复" : "连续旋律 · 合并";
+  const gestures = group.gestureIds.map((gestureId, slotIndex) => {
+    const barLabel = group.mode === "merged" ? formatBarRange(group.bars) : `第 ${group.bars[slotIndex]} 小节`;
+    const gesture = gestureById(gestureId);
+    if (gesture.kind === "rest") return `<div class="teacher-gesture-choice rest-gesture"><span>${barLabel}</span><img src="${gesture.image}" alt="${gesture.label}"><small>${gesture.label}</small>${gestureBeatGuide(group, slotIndex)}</div>`;
+    return `<button class="teacher-gesture-choice" data-edit-gesture data-group="${groupIndex}" data-slot="${slotIndex}"><span>${barLabel}</span><img src="${gesture.image}" alt="${gesture.label}"><small>${gesture.label}</small>${gestureBeatGuide(group, slotIndex)}<b>修改</b></button>`;
+  }).join("");
+  return `<article class="teacher-analysis-card" data-analysis-group="${groupIndex}"><div class="teacher-card-playback-track"><i></i></div><div class="teacher-analysis-card-head"><div><strong>${formatBarRange(group.bars)}</strong><p>${group.reason}</p></div><div class="teacher-card-actions"><span>${modeName}</span><button type="button" class="teacher-locate-button" data-action="locate-teacher-group" data-group="${groupIndex}">⌖ 定位试听</button></div></div><div class="teacher-playback-badge">▶ 音乐播放到这里</div><div class="teacher-gesture-pair mode-${group.mode}">${gestures}</div></article>`;
+}
+
+function formatBarRange(bars) {
+  return bars[0] === bars[1] ? `第 ${bars[0]} 小节` : `第 ${bars[0]}—${bars[1]} 小节`;
+}
+
+function renderTeacherGesturePicker() {
+  const meter = state.teacherAnalysisMeta?.meter || "4/4";
+  const scopes = ["universal", meter].filter((scope, index, list) => list.indexOf(scope) === index);
+  const sections = scopes.map(scope => {
+    const choices = gestureLibrary
+      .filter(gesture => gesture.scope === scope && gesture.kind !== "rest")
+      .map(gesture => `<button class="gesture-library-item" data-choose-gesture="${gesture.id}"><img src="${gesture.image}" alt="${gesture.label}"><span><strong>${gesture.name}${gesture.difficulty === "support" ? " · 辅助" : ""}</strong><small>${gesture.label}</small></span></button>`).join("");
+    return choices ? `<section class="gesture-library-section"><h4>${gestureScopeLabel(scope)}</h4><div class="gesture-library-grid">${choices}</div></section>` : "";
+  }).join("");
+  return `<div class="gesture-picker-backdrop" data-action="close-gesture-picker"><div class="gesture-picker" role="dialog" aria-modal="true" aria-labelledby="gesture-picker-title" onclick="event.stopPropagation()"><div class="gesture-picker-head"><div><p class="eyebrow">${escapeHtml(meter)} 手势图库</p><h3 id="gesture-picker-title">选择替换手势</h3></div><button class="button ghost" data-action="close-gesture-picker">关闭</button></div>${sections}</div></div>`;
+}
+
+function renderFeelMenu() {
+  return `${topbar("感受")}<section class="screen feel-menu-screen">
+    <div class="hero"><p class="eyebrow">选择一种方式</p><h2>你想怎么感受音乐？</h2></div>
+    <div class="feel-choice-grid">
+      <button class="feel-choice feel-choice-melody" data-go="feel-melody">
+        ${avatarMarkup("cat", "feel-choice-animal")}
+        <strong>画旋律</strong><small>跟着小猫画出声音的高低</small>
+      </button>
+      <button class="feel-choice feel-choice-body" data-go="feel-body">
+        ${avatarMarkup("dog", "feel-choice-animal")}
+        <strong>身体演奏</strong><small>跟着小狗用身体打节拍</small>
+      </button>
+      <button class="feel-choice feel-choice-sing" data-go="feel-sing">
+        ${avatarMarkup("rabbit", "feel-choice-animal")}
+        <strong>唱唱名</strong><small>跟着小兔唱 do、re、mi</small>
+      </button>
+    </div>
+  </section>`;
+}
+
+function feelPlayerButton() {
+  return `<button class="button primary feel-play-button" data-action="toggle-class-play">${state.classPlaying ? "Ⅱ 暂停" : "▶ 开始"}</button>`;
+}
+
+function renderSwanWindowProgress(analysis, currentIndex) {
+  const radius = 2;
+  const start = Math.max(0, Math.min(currentIndex - radius, analysis.length - (radius * 2 + 1)));
+  const visible = analysis.slice(start, start + radius * 2 + 1);
+  const items = visible.map((item, offset) => {
+    const index = start + offset;
+    const label = item.bars[0] === item.bars[1] ? item.bars[0] : `${item.bars[0]}—${item.bars[1]}`;
+    return `<span class="${index === currentIndex ? "active" : ""} ${index < currentIndex ? "done" : ""}">${label}</span>`;
+  }).join("");
+  return `<div class="swan-progress-count">第 ${currentIndex + 1} / ${analysis.length} 组</div><div class="swan-window-progress" aria-label="小节进度">${items}</div>`;
+}
+
+function swanGroupModeLabel(group) {
+  return group.mode === "merged" ? "一个连续动作" : group.mode === "repeat" ? "重复同一个动作" : "两个小节分别动作";
+}
+
+function swanGestureCardsMarkup(group) {
+  return group.gestureIds.map((gestureId, index) => {
+    const barLabel = group.mode === "merged" ? formatBarRange(group.bars) : `第 ${group.bars[index]} 小节`;
+    const gesture = gestureById(gestureId);
+    const restClass = gesture.kind === "rest" ? " rest-gesture" : "";
+    return `<div class="swan-measure-gesture${restClass}" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+  }).join("");
+}
+
+async function preloadSwanGestureImages() {
+  const urls = new Set(state.publishedTeacherAnalysis.flatMap(group => group.gestureIds.map(id => gestureById(id).image)));
+  await Promise.all([...urls].map(url => new Promise(resolve => {
+    const cachedImage = swanGestureImageCache.get(url);
+    if (cachedImage?.complete) {
+      Promise.resolve(cachedImage.decode?.()).catch(() => {}).finally(resolve);
+      return;
+    }
+    const image = cachedImage || new Image();
+    swanGestureImageCache.set(url, image);
+    const decode = () => Promise.resolve(image.decode?.()).catch(() => {}).finally(resolve);
+    image.addEventListener("load", decode, { once: true });
+    image.addEventListener("error", resolve, { once: true });
+    image.src = url;
+    if (image.complete) decode();
+  })));
+}
+
+function updateSwanSectionView(sectionIndex) {
+  const analysis = state.publishedTeacherAnalysis;
+  const group = analysis[sectionIndex] || defaultCarmenAnalysis[sectionIndex];
+  if (!group) return;
+  const range = app.querySelector(".swan-current-label span");
+  const mode = app.querySelector(".swan-current-label strong");
+  const grid = app.querySelector(".swan-measure-grid.is-active") || app.querySelector(".swan-measure-grid");
+  const nextGrid = [...app.querySelectorAll(".swan-measure-grid")].find(item => item !== grid);
+  const progressCount = app.querySelector(".swan-progress-count");
+  const windowProgress = app.querySelector(".swan-window-progress");
+  if (!range || !mode || !grid || !nextGrid || !progressCount || !windowProgress) return;
+  range.textContent = formatBarRange(group.bars);
+  mode.textContent = swanGroupModeLabel(group);
+  nextGrid.className = `swan-measure-grid mode-${group.mode} is-active`;
+  nextGrid.innerHTML = swanGestureCardsMarkup(group);
+  nextGrid.setAttribute("aria-hidden", "false");
+  grid.classList.remove("is-active");
+  grid.setAttribute("aria-hidden", "true");
+  const progressFrame = document.createElement("div");
+  progressFrame.innerHTML = renderSwanWindowProgress(analysis, sectionIndex);
+  progressCount.replaceWith(progressFrame.children[0]);
+  windowProgress.replaceWith(progressFrame.children[0]);
+}
+
+function renderFeelMelody() {
+  state.feelMode = "melody";
+  const analysis = state.publishedTeacherAnalysis;
+  const group = analysis[state.swanSection] || defaultCarmenAnalysis[state.swanSection];
+  const gestureCards = group.gestureIds.map((gestureId, index) => {
+    const barLabel = group.mode === "merged" ? formatBarRange(group.bars) : `第 ${group.bars[index]} 小节`;
+    const gesture = gestureById(gestureId);
+    if (gesture.kind === "rest") return `<div class="swan-measure-gesture rest-gesture" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+    return `<div class="swan-measure-gesture" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+  }).join("");
+  return `${topbar("画旋律")}<section class="screen feel-feature-screen">
+    <div class="feel-feature-heading">${avatarMarkup("cat", "feel-feature-animal melody-gesture-cat")}<div><p class="eyebrow">${escapeHtml(state.publishedLessonTitle)}</p><h2>跟着手势感受旋律</h2></div></div>
+    <div class="feel-core-card swan-gesture-core">
+      <div class="swan-current-label"><span>${formatBarRange(group.bars)}</span><strong>${group.mode === "merged" ? "一个连续动作" : group.mode === "repeat" ? "重复同一动作" : "两个小节分别动作"}</strong></div>
+      <div class="swan-measure-stage"><div class="swan-measure-grid mode-${group.mode} is-active" aria-hidden="false">${gestureCards}</div><div class="swan-measure-grid" aria-hidden="true"></div></div>
+      ${renderSwanWindowProgress(analysis, state.swanSection)}
+    </div>
+    <button class="button primary feel-play-button" data-action="play-swan-melody">${state.classPlaying ? "Ⅱ 暂停" : state.swanProgress >= 1 ? "↻ 再演一次" : "▶ 开始跟着演"}</button>
+  </section>`;
+}
+
+function renderFeelBody() {
+  state.feelMode = "body";
+  const lesson = bodyLesson();
+  loadBodyScore(lesson);
+  const pattern = bodyDisplayPattern(lesson);
+  const bpm = bodyLessonBpm(lesson);
+  const completed = Boolean(state.bodyRecordings[lesson.id]);
+  const completedCount = BODY_LESSONS.filter(item => state.bodyRecordings[item.id]).length;
+  const recording = state.bodyRecording.status === "recording";
+  const countdown = state.bodyRecording.status === "countdown";
+  const ready = state.bodyRecording.status === "ready";
+  const sequence = pattern.map((step, index) => {
+    const action = BODY_ACTIONS[step.action];
+    return `<div class="body-step action-${step.action}" data-body-step="${index}"><strong>${action.syllable}</strong><small>${action.label}</small></div>`;
+  }).join("");
+  const grooveSwitcher = BODY_GROOVE_ORDER.map(groove => `<button class="${lesson.groove === groove ? "active" : ""}" data-body-groove="${groove}" aria-pressed="${lesson.groove === groove}" ${recording || countdown ? "disabled" : ""}>${grooves[groove].name}</button>`).join("");
+  return `${topbar("身体演奏")}<section class="screen feel-feature-screen">
+    <div class="feel-feature-heading">${avatarMarkup("dog", "feel-feature-animal")}<div><p class="eyebrow">桌面节奏课 · ${state.bodyLessonIndex + 1} / 16</p><h2>${grooves[lesson.groove].name} · ${moods[lesson.mood].name}</h2></div></div>
+    <div class="body-groove-switcher" aria-label="切换律动">${grooveSwitcher}</div>
+    <div class="body-course-progress"><span style="width:${completedCount / 16 * 100}%"></span></div>
+    <p class="body-progress-copy">已完成 ${completedCount} 份节奏录音。每个律动依次练习四种心情。</p>
+    <div class="feel-core-card body-lesson-shell">
+      <div class="body-lesson-meta"><span>${bpm} BPM</span><strong>${pattern.map(step => BODY_ACTIONS[step.action].syllable).join(" · ")}</strong><em>${completed ? "✓ 这一课已保存" : "听一听，再录下两个小节"}</em></div>
+      <div class="body-action-guide-frame" data-body-guide="dong" role="img" aria-label="小狗示范敲桌面">
+        <img class="body-action-guide body-guide-dong" src="${BODY_ACTION_GUIDE}" alt="">
+        <img class="body-action-guide body-guide-ci" src="${BODY_ACTION_GUIDE}" alt="">
+        <img class="body-action-guide body-guide-da" src="${BODY_ACTION_GUIDE}" alt="">
+      </div>
+      <div class="body-sequence" aria-label="本课动作顺序">${sequence}</div>
+      <p class="body-record-hint">${recording ? "正在录制：跟着亮起的动作做，音乐此时不会播放。" : countdown ? "先听四拍准备，准备拍不会录进去。" : "先听小狗的节奏。正式录制时只有画面提示，背景音乐不会录进去。"}</p>
+      <div class="body-lesson-controls">
+        <button class="button secondary" data-action="body-listen" ${recording || countdown ? "disabled" : ""}>▶ 只听小狗</button>
+        <button class="button secondary" data-action="body-slow" ${recording || countdown ? "disabled" : ""}>慢速练习</button>
+        <button class="button secondary" data-action="body-practice" ${recording || countdown ? "disabled" : ""}>跟音乐练习</button>
+      </div>
+      <div class="body-recorder ${recording ? "is-recording" : ""}">
+        <div class="record-light">${recording ? "● 正在录制" : countdown ? "四拍准备" : ready ? "录制完成，先试听" : completed ? "可以重新录制" : "准备录制"}</div>
+        ${ready ? `<audio class="voice-preview" controls src="${state.bodyRecording.audioUrl}"></audio>` : ""}
+        <div class="button-row">${ready
+          ? `<button class="button primary" data-action="save-body-recording">保存并完成</button><button class="button ghost" data-action="record-body">重新录制</button>`
+          : `<button class="button primary" data-action="record-body" ${recording || countdown ? "disabled" : ""}>${completed ? "重新录这一课" : "开始录制"}</button>`}</div>
+      </div>
+      <div class="body-lesson-nav"><button class="button ghost" data-action="previous-body-lesson" ${state.bodyLessonIndex === 0 || recording || countdown ? "disabled" : ""}>← 上一课</button><button class="button ghost" data-action="next-body-lesson" ${state.bodyLessonIndex === 15 || !completed || recording || countdown ? "disabled" : ""}>下一课 →</button></div>
+    </div>
+  </section>`;
+}
+
+function jianpuDurationClass(duration) {
+  if (duration <= .25) return "sixteenth";
+  if (duration <= .5) return "eighth";
+  if (duration < 1) return "dotted-eighth";
+  if (duration > 1 && duration < 2) return "dotted-quarter";
+  if (duration >= 2) return "half";
+  return "quarter";
+}
+
+function renderJianpuNote(note, lesson) {
+  const index = lesson.notes.indexOf(note);
+  const octaveClass = note.octave < 0 ? "low" : note.octave > 0 ? "high" : "middle";
+  const dotted = note.duration === .75 || note.duration === 1.5;
+  const holdCount = note.duration >= 2 ? Math.max(1, Math.round(note.duration) - 1) : 0;
+  const holdMarkup = holdCount ? `<span class="jianpu-hold">${Array(holdCount).fill("—").join(" ")}</span>` : "";
+  return `<span class="jianpu-note ${octaveClass} ${jianpuDurationClass(note.duration)}" data-solfege-note="${index}" style="--note-grow:${Math.max(.5, note.duration)}"><span class="jianpu-sign"><span class="jianpu-number">${note.degree}${dotted ? `<i>·</i>` : ""}</span>${holdMarkup}</span><em>${escapeHtml(note.lyric || "　")}</em></span>`;
+}
+
+function solfegeRecordingKey(note) {
+  const midi = note.frequency > 0 ? Math.round(69 + 12 * Math.log2(note.frequency / 440)) : 0;
+  return `${note.solfege}-${midi}`;
+}
+
+function solfegeRecordingTargets(lesson = state.publishedSolfegeLesson || DEFAULT_SOLFEGE_LESSON) {
+  const unique = new Map();
+  lesson.notes.filter(note => note.degree > 0).forEach(note => {
+    const key = solfegeRecordingKey(note);
+    if (!unique.has(key)) unique.set(key, { key, solfege: note.solfege, degree: note.degree, octave: note.octave, frequency: note.frequency });
+  });
+  return [...unique.values()].sort((a, b) => a.frequency - b.frequency);
+}
+
+function solfegePitchLabel(target) {
+  const octaveText = target.octave < 0 ? "低音" : target.octave > 0 ? "高音" : "中音";
+  return `${octaveText} ${target.solfege}`;
+}
+
+function renderSolfegeRecorder(lesson) {
+  const targets = solfegeRecordingTargets(lesson);
+  const completed = targets.filter(target => state.solfegeRecordings[target.key]).length;
+  const selected = targets[Math.max(0, Math.min(targets.length - 1, state.solfegeRecordTargetIndex))] || targets[0];
+  const recording = state.solfegeRecordStatus === "recording";
+  const countdown = state.solfegeRecordStatus === "countdown";
+  const busy = state.solfegeRecordStatus !== "idle";
+  const saved = selected && Boolean(state.solfegeRecordings[selected.key]);
+  const targetButtons = targets.map((target, index) => `<button class="voice-target ${index === state.solfegeRecordTargetIndex ? "active" : ""} ${state.solfegeRecordings[target.key] ? "done" : ""}" data-record-target="${index}" aria-label="${solfegePitchLabel(target)}${state.solfegeRecordings[target.key] ? "已录制" : "未录制"}" ${busy ? "disabled" : ""}><span>${target.degree}</span><small>${target.solfege}</small></button>`).join("");
+  return `<section class="solfege-recorder" aria-label="录制我的唱名">
+    <div class="recorder-head"><div><strong>录制我的唱名</strong><span>跟着标准音唱 2 秒，录一次就能反复使用</span></div><button class="recorder-close" data-action="close-solfege-recorder" aria-label="收起录音区" ${busy ? "disabled" : ""}>×</button></div>
+    <div class="voice-progress"><i style="--voice-progress:${targets.length ? completed / targets.length : 0}"></i><span>已完成 ${completed} / ${targets.length}</span></div>
+    <div class="voice-targets">${targetButtons}</div>
+    <div class="voice-record-stage ${recording ? "is-recording" : ""}">
+      <div><small>现在录</small><strong>${selected ? solfegePitchLabel(selected) : "暂无目标音"}</strong><span>${saved ? "已录过，可以重新录制" : countdown ? "先听标准音，准备开口" : recording ? "正在录音，请保持 2 秒" : "先听标准音，再开始录音"}</span></div>
+      <div class="voice-record-actions">
+        <button class="button secondary" data-action="play-solfege-guide" ${recording || countdown ? "disabled" : ""}>♪ 标准音</button>
+        <button class="button primary" data-action="record-solfege-target" ${recording || countdown ? "disabled" : ""}>${recording ? "正在录音…" : countdown ? "准备…" : saved ? "重新录制" : "开始录音"}</button>
+      </div>
+    </div>
+    <p class="voice-local-note">录音只保存在当前浏览器，不会上传。</p>
+  </section>`;
+}
+
+function renderFeelSing() {
+  state.feelMode = "sing";
+  const lesson = state.publishedSolfegeLesson || DEFAULT_SOLFEGE_LESSON;
+  const recorderBusy = state.solfegeRecordStatus !== "idle";
+  const phrases = lesson.phrases?.length ? lesson.phrases : [{ id: "all", label: "第 1 页", lyrics: "" }];
+  state.solfegePhraseIndex = Math.max(0, Math.min(state.solfegePhraseIndex, phrases.length - 1));
+  const phrase = phrases[state.solfegePhraseIndex];
+  const pageMeasures = lesson.measures.filter(measure => measure.notes.some(note => note.phraseId === phrase.id));
+  const pickup = pageMeasures.find(measure => measure.pickup);
+  const fullMeasures = pageMeasures.filter(measure => !measure.pickup).slice(0, 4);
+  const pickupMarkup = pickup ? `<div class="jianpu-pickup"><span>弱起</span>${pickup.notes.map(note => renderJianpuNote(note, lesson)).join("")}</div>` : "";
+  const measuresMarkup = fullMeasures.map(measure => `<div class="jianpu-measure"><div>${measure.notes.map(note => renderJianpuNote(note, lesson)).join("")}</div></div>`).join("");
+  const pageDots = phrases.map((item, index) => `<button class="${index === state.solfegePhraseIndex ? "active" : ""}" data-solfege-phrase="${index}" aria-label="第 ${index + 1} 页">${index + 1}</button>`).join("");
+  const targets = solfegeRecordingTargets(lesson);
+  const completed = targets.filter(target => state.solfegeRecordings[target.key]).length;
+  const sourceLabel = state.solfegeSource === "voice" ? `我的声音 ${completed}/${targets.length}` : state.solfegeSource === "builtinVoice" ? "唱名示范" : "钢琴示范";
+  return `${topbar("唱唱名")}<section class="screen feel-feature-screen">
+    <div class="simple-sing-heading">${avatarMarkup("rabbit", "simple-sing-rabbit")}<div><p>${escapeHtml(lesson.title)} · 1 = ${escapeHtml(lesson.tonic)} · 2/4</p><h2>唱唱名</h2></div></div>
+    <div class="simple-jianpu-card">
+      <div class="simple-score-meta"><span>${escapeHtml(phrase.label)}</span><strong>${escapeHtml(phrase.lyrics)}</strong></div>
+      <div class="simple-score-line" aria-label="本页四小节简谱">${pickupMarkup}<div class="four-measure-grid">${measuresMarkup}</div></div>
+      <div class="simple-page-dots" aria-label="切换简谱页">${pageDots}</div>
+    </div>
+    <div class="solfege-play-panel">
+      <div class="voice-source-switch" aria-label="选择演唱声音">
+        <button class="${state.solfegeSource === "piano" ? "active" : ""}" data-solfege-source="piano" ${recorderBusy ? "disabled" : ""}><strong>钢琴示范</strong><small>随时可用</small></button>
+        <button class="${state.solfegeSource === "builtinVoice" ? "active" : ""}" data-solfege-source="builtinVoice" ${recorderBusy ? "disabled" : ""}><strong>唱名示范</strong><small>内置录音</small></button>
+        <button class="${state.solfegeSource === "voice" ? "active" : ""}" data-solfege-source="voice" ${recorderBusy ? "disabled" : ""}><strong>我的声音</strong><small>${completed}/${targets.length} 已录</small></button>
+      </div>
+      <button class="button primary simple-sing-button" data-action="toggle-class-play" ${recorderBusy ? "disabled" : ""}>${state.classPlaying ? "Ⅱ 停止" : `▶ ${sourceLabel}`}</button>
+      <button class="record-entry" data-action="open-solfege-recorder" ${recorderBusy ? "disabled" : ""}>${completed ? "管理我的录音" : "录制我的唱名"}</button>
+    </div>
+    ${state.solfegeRecordingOpen ? renderSolfegeRecorder(lesson) : ""}
+  </section>`;
+}
+
+function melodyContour(measure = state.lessonMeasure) {
+  const descriptions = ["平稳 → 向上走", "向下走 → 回到中间"];
+  const paths = [
+    "40,132 170,132 300,96 430,54 600,54",
+    "40,54 190,96 330,132 470,96 600,96"
+  ];
+  return `<div class="melody-card" aria-label="第 ${measure + 1} 小节旋律曲线">
+    <div class="measure-card-label">第 ${measure + 1} 小节 · 独立旋律卡</div>
     <div class="melody-labels"><span>高</span><span>低</span></div>
-    <svg class="melody-svg" viewBox="0 0 640 180" role="img" aria-label="旋律先保持平稳，再逐渐升高，最后回到中间">
-      <polyline points="40,132 120,132 200,96 280,96 360,54 440,54 520,96 600,96" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></polyline>
-      ${[[40,132],[120,132],[200,96],[280,96],[360,54],[440,54],[520,96],[600,96]].map(([x,y], index) => `<circle cx="${x}" cy="${y}" r="15"><title>第 ${index + 1} 个声音</title></circle>`).join("")}
+    <svg class="melody-svg" viewBox="0 0 640 180" role="img" aria-label="${descriptions[measure]}">
+      <polyline points="${paths[measure]}" fill="none" stroke="currentColor" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"></polyline>
     </svg>
-    <div class="melody-caption">平稳 → 向上走 → 回到中间</div>
+    <div class="melody-caption">${descriptions[measure]} · 跟着小兔画</div>
   </div>`;
 }
 
 function bodyPattern() {
-  return `<div class="body-pattern" aria-label="身体演奏动作">
-    <div><strong>1</strong><span>👏</span><small>拍手</small></div>
-    <div><strong>2</strong><span>🤲</span><small>拍腿</small></div>
-    <div><strong>3</strong><span>👏</span><small>拍手</small></div>
-    <div><strong>4</strong><span>✨</span><small>停住</small></div>
+  return `<div class="body-demo">
+    <div class="dog-demo-leader" aria-live="polite">
+      ${dogStateMarkup("ready", "dog-demo-state", "小狗准备领演")}
+      <span>小狗领演</span>
+    </div>
+    <div class="body-pattern" aria-label="身体演奏动作">
+      <div data-action-step="0"><strong>1</strong>${dogStateMarkup("clap", "dog-action-thumbnail", "小狗拍手") }<small>拍手</small></div>
+      <div data-action-step="1"><strong>2</strong>${dogStateMarkup("patThighs", "dog-action-thumbnail", "小狗拍腿") }<small>拍腿</small></div>
+      <div data-action-step="2"><strong>3</strong>${dogStateMarkup("clap", "dog-action-thumbnail", "小狗拍手") }<small>拍手</small></div>
+      <div data-action-step="3"><strong>4</strong>${dogStateMarkup("stop", "dog-action-thumbnail", "小狗停住") }<small>停住</small></div>
+    </div>
   </div>`;
 }
 
-function renderClassroom() {
-  return `${topbar("教师模式")}<section class="screen classroom-screen">
-    <div class="hero"><p class="eyebrow">AI 音乐课堂</p><h2>把一首歌，变成全班都能参与的音乐活动</h2><p class="lead">首版使用经过审核的内置歌曲，保证课堂内容稳定、清楚、适龄。</p></div>
-    <div class="lesson-shell">
-      <div class="lesson-summary">
-        <div class="song-cover">♪</div>
-        <div><span class="lesson-tag">内置示范歌曲</span><h3>《小星星》</h3><p>6–8 岁 · 约 8 分钟 · 学习旋律高低与稳定拍</p></div>
-      </div>
-      <div class="ai-result-title"><span>AI 已完成分析</span><small>教师审核版</small></div>
-      ${melodyContour()}
-      <h3 class="section-heading">全班身体演奏</h3>
-      ${bodyPattern()}
-      <div class="teacher-notes"><strong>教师引导语</strong><p>“用手指跟着线条走一走。声音变高时，手也慢慢举高。”</p></div>
+function renderLibrary() {
+  return `${topbar("审核歌曲页")}<section class="screen classroom-screen">
+    <div class="hero"><p class="eyebrow">音乐库</p><h2>选择一首已经审核的音乐</h2><p class="lead">这里的音乐已经准备好画旋律、身体演奏和唱唱名。</p></div>
+    <div class="library-grid">
+      <article class="library-song selected"><div class="song-cover">♪</div><div><span class="lesson-tag">人工校准课程</span><h3>《东方红》</h3><p>F 调 · 2/4 拍 · 每页 4 小节</p><button class="button primary" data-go="feel">选择这首歌</button></div></article>
+      <article class="library-song"><div class="song-cover child-work-cover">★</div><div><span class="lesson-tag">我的作品</span><h3>${state.saved ? escapeHtml(state.title) : "还没有保存的作品"}</h3><p>${state.saved ? "可再次画旋律、做身体演奏" : "完成一件作品后，它会保存在这台设备。"}</p>${state.saved ? `<div class="button-row library-actions"><button class="button secondary" data-go="refine">打开我的作品</button><button class="button ghost danger-text" data-action="delete-work">删除本机作品</button></div>` : ""}</div></article>
     </div>
-    <div class="button-row"><button class="button secondary" data-action="play-class-song">▶ 听旋律片段</button><button class="button primary" data-go="classroomLesson">进入投屏课堂 →</button></div>
-  </section>`;
-}
-
-function renderClassroomLesson() {
-  return `${topbar("投屏课堂")}<section class="screen">
-    <div class="hero"><p class="eyebrow">先看见，再用身体感受</p><h2>跟着旋律线，一起完成 4 拍</h2><p class="lead">屏幕负责提示什么时候开始、什么时候停；老师负责观察孩子并调整节奏。</p></div>
-    <div class="lesson-shell lesson-live">
-      ${melodyContour()}
-      ${bodyPattern()}
-      <div class="teacher-notes"><strong>这一轮只学一个特点</strong><p>听见旋律向上时举高手，最后一拍一起停住。</p></div>
-    </div>
-    <div class="button-row"><button class="button secondary" data-action="play-class-song">▶ 示范一次</button><button class="button primary" data-go="mood">现在轮到孩子创作 →</button></div>
   </section>`;
 }
 
@@ -244,67 +1350,55 @@ function renderMood() {
     <button class="mood-card ${mood.className} ${state.mood === key ? "selected" : ""}" data-mood="${key}" aria-pressed="${state.mood === key}">
       <span class="emoji">${mood.emoji}</span><strong>${mood.name}</strong><small>${mood.hint}</small>
     </button>`).join("");
-  return `${topbar("创作第 1 步 / 3")}<section class="screen">
-    <div class="hero"><p class="eyebrow">选择音乐的起点</p><h2>今天想从哪一种感觉开始？</h2><p class="lead">它只是一个开始，你可以把音乐改成任何样子。</p></div>
+  return `${topbar("创作 · 选择感觉")}<section class="screen">
+    <div class="hero"><p class="eyebrow">第一张贴纸</p><h2>选择一种感觉</h2><p class="lead">它会决定音乐的旋律材料和画面氛围。</p></div>
     <div class="mood-grid">${cards}</div>
-    <div class="actions"><button class="button primary" data-go="arrange" ${state.mood ? "" : "disabled"}>用这张贴纸开始</button></div>
+    <div class="actions"><button class="button primary" data-go="groove" ${state.mood ? "" : "disabled"}>选择律动贴纸</button></div>
   </section>`;
 }
 
-function renderWarmup() {
-  const dots = Array.from({ length: CREATION_BEATS }, (_, index) => {
-    const hasNote = state.warmPattern.includes(index);
-    return `<span class="beat-dot ${hasNote ? "hit" : ""}" data-beat="${index}" aria-label="第 ${index + 1} 拍${hasNote ? "有声音" : "休息"}">${hasNote ? "♩" : "—"}</span>`;
-  }).join("");
-  return `${topbar("第 2 步 / 5")}<section class="screen">
-    <div class="hero"><p class="eyebrow">先和小狗热热身</p><h2>听一遍，再跟着拍 4 拍</h2><p class="lead">每一格是一拍；“♩”拍一下，“—”休息一下。没有分数。</p></div>
-    <div class="stage-card">
-      <div id="warm-dog" class="animal-hero">${avatarMarkup("dog", "warm-avatar")}</div>
-      <div class="beat-row">${dots}</div>
-      <div class="button-row">
-        <button class="button primary" data-action="play-warm">▶ 听小狗示范</button>
-        <button class="button secondary" data-action="new-pattern">换一个</button>
-      </div>
-    </div>
-    <button class="button ghost" data-go="record">跳过热身，直接创作 →</button>
-  </section>`;
+function renderGroove() {
+  const cards = Object.entries(grooves).map(([key, groove]) => `<button class="groove-card ${state.groove === key ? "selected" : ""}" data-groove="${key}" aria-pressed="${state.groove === key}"><span>${groove.emoji}</span><strong>${groove.name}</strong><small>${groove.hint}</small></button>`).join("");
+  const customReady = Boolean(state.groove && state.bodyRecordings[currentPackId()]);
+  return `${topbar("创作 · 选择律动")}<section class="screen"><div class="hero"><p class="eyebrow">第二张贴纸</p><h2>音乐想怎么动？</h2><p class="lead">先选律动，再决定让小狗播放系统节奏，还是你在课程里录好的节奏。</p></div><div class="mood-grid">${cards}</div>${state.groove ? `<div class="music-ready"><span>✓ 真实分轨已就绪</span><small>${moods[state.mood].name} × ${grooves[state.groove].name} · ${grooveAudio[state.groove].bpm} BPM</small><button class="button secondary" data-action="preview-pack">${state.packPreviewing ? "Ⅱ 停止试听" : "▶ 试听完整乐队"}</button></div><div class="rhythm-source-chooser"><div><strong>小狗用哪一种节奏？</strong><small>这个选择会用于作品的全部四段。</small></div><button class="${state.dogRhythmSource === "system" ? "active" : ""}" data-rhythm-source="system"><b>系统节奏</b><small>使用已有的小狗分轨</small></button><button class="${state.dogRhythmSource === "custom" ? "active" : ""}" data-rhythm-source="custom" ${customReady ? "" : "disabled"}><b>我的录制</b><small>${customReady ? "使用这组心情与律动的录音" : "还没有完成对应课程"}</small></button>${customReady ? "" : `<button class="button ghost rhythm-course-link" data-go="feel-body">去身体节奏课录制 →</button>`}</div>` : ""}<div class="actions"><button class="button primary" data-go="record" ${state.groove ? "" : "disabled"}>录一张我的声音贴纸</button><button class="button ghost" data-go="arrange" ${state.groove ? "" : "disabled"}>跳过录音，开始编排</button></div></section>`;
 }
 
 function renderRecord() {
-  const hits = state.recordHits.slice(0, CREATION_BEATS);
-  const dots = Array.from({ length: CREATION_BEATS }, (_, index) => `<span class="beat-dot ${hits.includes(index) ? "hit" : ""}" data-record-beat="${index}">${hits.includes(index) ? "🐾" : index + 1}</span>`).join("");
-  const hasRecording = state.recordHits.length > 0 && !state.isRecording;
-  return `${topbar("第 3 步 / 5")}<section class="screen">
-    <div class="hero"><p class="eyebrow">录下我的拍手</p><h2>${state.isRecording ? "现在，拍出你的 4 拍！" : hasRecording ? "小狗记住你的节奏了" : "准备好，就拍 4 拍"}</h2><p class="lead">前期每拍最多记一次拍手，也可以让某一拍安静。你还可以轻拍中间的大按钮。</p></div>
-    <div class="stage-card">
-      <div class="beat-row">${dots}</div>
-      <button class="clap-pad" data-action="clap" aria-label="轻拍这里模拟拍手">👏</button>
-      <p id="record-status" class="helper">${state.isRecording ? "正在录制 · 拍手或轻拍按钮" : hasRecording ? `捕捉到 ${state.recordHits.length} 次拍手` : "原型支持屏幕轻拍；允许麦克风后也能直接拍手"}</p>
-      <div class="button-row">
-        <button class="button ${hasRecording ? "secondary" : "primary"}" data-action="start-record">${hasRecording ? "再拍一次" : "开始录制"}</button>
-        <button class="button secondary" data-action="enable-mic">允许麦克风</button>
-      </div>
+  const ready = state.voice.status === "ready";
+  const recording = state.voice.status === "recording";
+  const preparing = state.voice.status === "countdown";
+  const busy = recording || preparing;
+  const duration = twoBarDuration();
+  return `${topbar("创作 · 我的声音")}<section class="screen">
+    <div class="hero"><p class="eyebrow">可选的第三张贴纸</p><h2>${recording ? "正在录下你的声音" : preparing ? "听四拍，准备开始" : ready ? "这就是我的声音贴纸" : "把身边的声音放进音乐里"}</h2><p class="lead">可以录生活声音、唱歌、哼唱、说话或拟声。先准备 4 拍，再录两个小节（约 ${Math.ceil(duration)} 秒）。</p></div>
+    <div class="stage-card voice-recorder ${recording ? "is-recording" : ""}">
+      <div class="record-light">${recording ? "● 正在录制" : preparing ? "四拍准备" : ready ? "录制完成" : "准备录制"}</div>
+      <div class="beat-row">${Array.from({ length: 8 }, (_, index) => `<span class="beat-dot" data-record-beat="${index}">${index + 1}</span>`).join("")}</div>
+      ${ready ? `<audio class="voice-preview" controls src="${state.voice.audioUrl}"></audio>` : `<div class="voice-icon">🎙️</div>`}
+      <p id="record-status" class="helper">${recording ? "红灯亮着，剩余进度会跟着拍点走。" : preparing ? "这是准备拍，还没有开始录音。" : ready ? "先试听；满意后把它放进贴纸盒。" : "录音只保存在这台设备，不评价对错，也不会识别内容。"}</p>
+      <div class="button-row">${ready ? `<button class="button primary" data-action="use-voice">用这个声音</button><button class="button secondary" data-action="record-voice">重新录制</button>` : `<button class="button primary" data-action="record-voice" ${busy ? "disabled" : ""}>开始录制</button>`}</div>
     </div>
-    <div class="actions"><button class="button primary" data-go="arrange" ${hasRecording ? "" : "disabled"}>就用这个节奏</button></div>
+    <button class="button ghost" data-go="arrange" ${busy ? "disabled" : ""}>跳过录音，开始编排</button>
   </section>`;
 }
 
 function renderArrange() {
   const questions = ["谁先开始？", "要加入新的声音吗？", "这里想怎么变化？", "谁来完成最后一段？"];
   const sections = state.sections.map((section, sectionIndex) => {
-    const chips = section.length ? section.map(key => `<button class="animal-chip ${state.playingSection === sectionIndex ? "playing" : ""}" draggable="true" data-chip="${key}" data-from="${sectionIndex}" title="点击让${animals[key].name}休息">${avatarMarkup(key)}</button>`).join("") : `<div class="empty-section">点一下这里，邀请选中的动物</div>`;
+    const chips = section.length ? section.map(key => `<button class="animal-chip ${key === "voice" ? "voice-chip" : ""} ${state.playingSection === sectionIndex ? "playing" : ""}" draggable="true" data-chip="${key}" data-from="${sectionIndex}" title="点击让${stickerInfo(key).name}休息">${stickerMarkup(key)}</button>`).join("") : `<div class="empty-section">点一下这里，邀请选中的贴纸</div>`;
     return `<article class="section-card ${state.playingSection === sectionIndex ? "current" : ""}" data-section="${sectionIndex}">
       <span class="section-number">${sectionIndex + 1}</span><p>${questions[sectionIndex]}</p><div class="section-animals">${chips}</div>
       <button class="button ghost" data-action="play-section" data-index="${sectionIndex}">▶ 试听</button>
     </article>`;
   }).join("");
-  const stickers = Object.entries(animals).map(([key, animal]) => `<button class="sticker ${state.selectedAnimal === key ? "selected" : ""}" draggable="true" data-sticker="${key}" aria-pressed="${state.selectedAnimal === key}">${avatarMarkup(key)}<span>${animal.name} · ${animal.role}</span></button>`).join("");
-  return `${topbar("创作第 2 步 / 3")}<section class="screen arrange-screen">
+  const stickerKeys = [...arrangementAnimals, ...(state.voice.status === "ready" ? ["voice"] : [])];
+  const stickers = stickerKeys.map(key => { const sticker = stickerInfo(key); return `<button class="sticker ${key === "voice" ? "voice-sticker" : ""} ${state.selectedAnimal === key ? "selected" : ""}" draggable="true" data-sticker="${key}" aria-pressed="${state.selectedAnimal === key}">${stickerMarkup(key)}<span>${sticker.name} · ${sticker.role}</span></button>`; }).join("");
+  return `${topbar("创作 · 四段编排")}<section class="screen arrange-screen">
     <div class="hero"><p class="eyebrow">叫上动物乐队</p><h2>谁在哪一段演奏？</h2><p class="lead">拖动贴纸，或先点动物、再点乐段。点时间轴里的动物可以让它休息。</p></div>
     ${renderStage()}
     <div class="timeline">${sections}</div>
-    <div class="sticker-tray" data-tray><h3>动物贴纸盒</h3><div class="stickers">${stickers}</div></div>
-    <div class="button-row"><button class="button secondary" data-action="play-all">▶ 听我的作品</button><button class="button primary" data-action="begin-refine">看看它能怎么玩 →</button></div>
+    <div class="sticker-tray" data-tray><h3>${state.voice.status === "ready" ? "动物和我的声音贴纸盒" : "动物贴纸盒"}</h3><div class="stickers">${stickers}</div><p class="audio-note">四张动物贴纸均已接入真实分轨；小狗负责节奏，小熊、小猫和小狮子组成伴奏。</p>${state.voice.status === "ready" ? `<button class="button ghost danger-text" data-action="delete-voice">删除我的声音贴纸</button>` : ""}</div>
+    <div class="button-row"><button class="button secondary" data-action="${state.playingSection !== null ? "stop-composition" : "play-all"}">${state.playingSection !== null ? "Ⅱ 暂停试听" : "▶ 听我的作品"}</button><button class="button primary" data-action="begin-refine">看看它能怎么玩 →</button></div>
   </section>`;
 }
 
@@ -319,7 +1413,17 @@ function renderProcessing() {
   </section>`;
 }
 
+function stickerInfo(key) {
+  if (key === "voice") return { name: "我的声音", role: "录音" };
+  return animals[key];
+}
+
+function stickerMarkup(key) {
+  return key === "voice" ? `<span class="voice-sticker-icon" aria-hidden="true">🎙️</span>` : avatarMarkup(key);
+}
+
 function renderRefine() {
+  const voiceSections = state.sections.map((section, index) => section.includes("voice") ? index + 1 : null).filter(Boolean);
   return `${topbar("创作第 3 步 / 3")}<section class="screen">
     <div class="hero"><p class="eyebrow">作品已经准备好</p><h2>先听作品，再一起演出来</h2><p class="lead">AI只优化音量、衔接和结尾，不重新作曲，也不替你改变动物出场。</p></div>
     <div class="lesson-shell">
@@ -332,11 +1436,12 @@ function renderRefine() {
         <div>✓ 不增加没有选择的乐器</div>
         <div>✓ ${state.version === "ai" ? "只优化音量、衔接和结尾" : "这是系统按四段编排完成的原始混音"}</div>
       </div>
-      <div class="button-row"><button class="button secondary" data-action="preview-version">▶ 听这个版本</button><button class="button ghost" data-go="arrange">回去改一改</button></div>
-      <h3 class="section-heading">把我的作品变成课堂玩法</h3>
+      <div class="button-row"><button class="button secondary" data-action="${state.playingSection !== null ? "stop-composition" : "preview-version"}">${state.playingSection !== null ? "Ⅱ 暂停试听" : "▶ 听这个版本"}</button><button class="button ghost" data-go="arrange">回去改一改</button></div>
+      <h3 class="section-heading">按小节画旋律</h3>
       ${melodyContour()}
-      <h3 class="section-heading">AI生成的身体演奏</h3>
+      <h3 class="section-heading">按小节、逐拍身体演奏</h3>
       ${bodyPattern()}
+      ${voiceSections.length ? `<div class="voice-in-work">🎙️ 第 ${voiceSections.join("、")} 段会听见我的声音贴纸；系统保留原录音，不为它创造新动作。</div>` : ""}
     </div>
     <div class="button-row"><button class="button primary" data-go="perform">一起演我的音乐 →</button><button class="button secondary" data-go="postcard">做成音乐明信片</button></div>
   </section>`;
@@ -354,8 +1459,8 @@ function renderPostcard() {
       <h2>${safeTitle}</h2>
       ${band(state.playingSection !== null ? "playing" : "")}
       <div class="postcard-message">“${safeMessage}”</div>
-      <button class="button secondary" data-action="play-all">▶ 播放我的音乐</button>
-      <p class="authorship">由我选择与编排 · AI 提供音乐素材和混音帮助</p>
+      <button class="button secondary" data-action="${state.playingSection !== null ? "stop-composition" : "play-all"}">${state.playingSection !== null ? "Ⅱ 暂停播放" : "▶ 播放我的音乐"}</button>
+      <p class="authorship">${state.voice.status === "ready" ? "由我录制、选择与编排 · AI 提供音乐素材和混音帮助" : "由我选择与编排 · AI 提供音乐素材和混音帮助"}</p>
     </div>
     <div class="stage-card">
       <h3>给作品选个名字</h3><div class="choice-chips">${titles.map(title => `<button class="choice-chip ${state.title === title ? "selected" : ""}" data-title="${title}">${title}</button>`).join("")}</div>
@@ -373,25 +1478,25 @@ function renderPostcard() {
 
 function renderPerform() {
   return `${topbar("一起演")}<section class="screen">
-    <div class="hero"><p class="eyebrow">这里不会拍摄你</p><h2>跟着动物一起动起来</h2><p class="lead">小狗拍手、小兔唱 do re mi、小熊弹键盘、小猫摇摆、小狮子先吸气、再吹小号。没有评分，尽情表演吧！</p></div>
+    <div class="hero"><p class="eyebrow">这里不会拍摄你</p><h2>跟着动物一起动起来</h2><p class="lead">先做一次示范，再给 4 拍准备。小狗拍手、小兔画旋律、小熊按和弦、小猫轻跺脚、小狮子吹一下。没有评分。</p></div>
     ${band(state.playingSection !== null ? "playing" : "")}
     ${bodyPattern()}
-    <div class="actions"><button class="button primary" data-action="play-performance">▶ 开始一起演</button><button class="button secondary" data-go="classroom">回到教师课堂</button></div>
+    <div class="actions"><button class="button primary" data-action="${state.playingSection !== null ? "stop-composition" : "play-performance"}" ${state.performancePreparing ? "disabled" : ""}>${state.performancePreparing ? "4 拍准备中…" : state.playingSection !== null ? "Ⅱ 暂停一起演" : "▶ 开始一起演"}</button><button class="button secondary" data-go="feel">回到感受课堂</button></div>
   </section>`;
 }
 
 function renderStage() {
   const sectionIndex = state.playingSection ?? state.stageSection;
   const activeAnimals = state.stageCompleted
-    ? Object.keys(animals).filter(key => state.sections.some(section => section.includes(key)))
+    ? arrangementAnimals.filter(key => state.sections.some(section => section.includes(key)))
     : state.sections[sectionIndex];
   const visibleAnimals = [...new Set([...activeAnimals, ...state.stageLeaving])];
-  const performers = Object.entries(animals)
-    .filter(([key]) => visibleAnimals.includes(key))
-    .map(([key, animal]) => `
-      <div class="stage-character stage-${key} ${state.stageEntering.includes(key) ? "stage-enter" : ""} ${state.stageLeaving.includes(key) ? "stage-leave" : ""}" title="${animal.name} · ${animal.role}">
+  const visibleCast = arrangementAnimals.filter(key => visibleAnimals.includes(key));
+  const performers = visibleCast
+    .map(key => `
+      <div class="stage-character stage-${key} ${state.stageEntering.includes(key) ? "stage-enter" : ""} ${state.stageLeaving.includes(key) ? "stage-leave" : ""}" title="${animals[key].name} · ${animals[key].role}">
         ${performerMarkup(key, "stage-art")}
-        <span class="stage-name">${animal.name}</span>
+        <span class="stage-name">${animals[key].name}</span>
       </div>`).join("");
   return `<section class="stage-panel" aria-label="动物音乐舞台">
     <p class="stage-panel-label">舞台正在演出 · 时间轴决定谁上场</p>
@@ -400,7 +1505,7 @@ function renderStage() {
       <div class="stage-banner">${state.stageCompleted ? "演奏完成 · 乐队合照" : `第 ${sectionIndex + 1} 段 · 正在演奏`}</div>
       <div class="stage-stars">✦　·　♪　·　✦</div>
       <div class="stage-floor"></div>
-      <div class="stage-cast">${performers || `<div class="empty-stage-message">这一段请动物们休息</div>`}</div>
+      <div class="stage-cast cast-count-${visibleCast.length}">${performers || `<div class="empty-stage-message">这一段请动物们休息</div>`}</div>
     </div>
   </section>`;
 }
@@ -408,18 +1513,240 @@ function renderStage() {
 function renderModal() {
   if (!state.modal) return "";
   return `<div class="modal-backdrop" data-action="close-modal"><div class="modal" role="dialog" aria-modal="true" aria-labelledby="modal-title" onclick="event.stopPropagation()">
-    <div class="icon">🛡️</div><h2 id="modal-title">请一位家长或老师来帮忙</h2><p class="lead">作品现在只保存在这台设备上。分享前，请确认作品里没有真实姓名、学校或住址。</p>
-    <div class="actions" style="margin:22px auto 0"><button class="button primary" data-action="adult-confirm">我已确认，模拟生成私密链接</button><button class="button secondary" data-action="close-modal">暂不分享</button></div>
+    <div class="icon">🛡️</div><h2 id="modal-title">请一位家长或老师来帮忙</h2><p class="lead">${state.voice.status === "ready" ? "这件作品包含儿童录音。分享前，请确认录音内容不含真实姓名、学校、住址或其他隐私。" : "作品现在只保存在这台设备上。分享前，请确认作品里没有真实姓名、学校或住址。"}</p>
+    <div class="actions" style="margin:22px auto 0"><button class="button primary" data-action="adult-confirm">我已确认，模拟生成私密链接</button>${state.voice.status === "ready" ? `<button class="button secondary" data-action="remove-voice-share">移除录音后再分享</button>` : ""}<button class="button secondary" data-action="close-modal">暂不分享</button></div>
   </div></div>`;
 }
 
 function bindEvents() {
   app.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setScreen(button.dataset.go)));
   app.querySelectorAll("[data-mood]").forEach(button => button.addEventListener("click", () => selectMood(button.dataset.mood)));
+  app.querySelectorAll("[data-groove]").forEach(button => button.addEventListener("click", () => selectGroove(button.dataset.groove)));
+  app.querySelectorAll("[data-body-groove]").forEach(button => button.addEventListener("click", () => selectBodyGroove(button.dataset.bodyGroove)));
+  app.querySelectorAll("[data-rhythm-source]").forEach(button => button.addEventListener("click", () => {
+    if (button.dataset.rhythmSource === "custom" && !state.bodyRecordings[currentPackId()]) return;
+    stopMusicAudio();
+    state.dogRhythmSource = button.dataset.rhythmSource;
+    render();
+  }));
+  app.querySelectorAll("[data-feel-mode]").forEach(button => button.addEventListener("click", () => { state.feelMode = button.dataset.feelMode; render(); }));
+  app.querySelectorAll("[data-solfege-mode]").forEach(button => button.addEventListener("click", () => { state.solfegeMode = button.dataset.solfegeMode; render(); }));
+  app.querySelectorAll("[data-solfege-source]").forEach(button => button.addEventListener("click", () => {
+    if (state.classPlaying) toggleClassPlayback();
+    state.solfegeSource = button.dataset.solfegeSource;
+    render();
+  }));
+  app.querySelectorAll("[data-record-target]").forEach(button => button.addEventListener("click", () => {
+    state.solfegeRecordTargetIndex = Number(button.dataset.recordTarget);
+    render();
+  }));
+  app.querySelectorAll("[data-solfege-phrase]").forEach(button => button.addEventListener("click", () => {
+    if (state.classPlaying) toggleClassPlayback();
+    state.solfegePhraseIndex = Number(button.dataset.solfegePhrase);
+    render();
+  }));
+  app.querySelectorAll("[data-speed]").forEach(button => button.addEventListener("click", () => { state.playbackRate = Number(button.dataset.speed); if (state.classPlaying) playClassSong(); else render(); }));
   app.querySelectorAll("[data-action]").forEach(button => button.addEventListener("click", event => handleAction(button.dataset.action, button, event)));
   app.querySelectorAll("[data-version]").forEach(button => button.addEventListener("click", () => { state.version = button.dataset.version; render(); }));
   app.querySelectorAll("[data-title]").forEach(button => button.addEventListener("click", () => { state.title = button.dataset.title; render(); }));
   app.querySelectorAll("[data-message]").forEach(button => button.addEventListener("click", () => { state.message = button.dataset.message; render(); }));
+  app.querySelectorAll("[data-edit-gesture]").forEach(button => button.addEventListener("click", () => {
+    state.teacherEditing = { group: Number(button.dataset.group), slot: Number(button.dataset.slot) };
+    render();
+  }));
+  app.querySelectorAll("[data-choose-gesture]").forEach(button => button.addEventListener("click", () => chooseTeacherGesture(button.dataset.chooseGesture)));
+  const teacherFileInput = app.querySelector("[data-teacher-file]");
+  teacherFileInput?.addEventListener("change", () => {
+    const file = teacherFileInput.files?.[0];
+    if (!file) return;
+    if (teacherAudioPreviewUrl?.startsWith("blob:")) URL.revokeObjectURL(teacherAudioPreviewUrl);
+    teacherAudioFile = file;
+    teacherPreviewMarkedGroup = -1;
+    teacherAudioPreviewUrl = URL.createObjectURL(file);
+    state.teacherFileName = file.name;
+    state.teacherPublished = false;
+    render();
+  });
+  const scoreFileInput = app.querySelector("[data-score-file]");
+  scoreFileInput?.addEventListener("change", () => {
+    const file = scoreFileInput.files?.[0];
+    if (!file) return;
+    if (state.scoreImageUrl?.startsWith("blob:")) URL.revokeObjectURL(state.scoreImageUrl);
+    teacherScoreFile = file;
+    state.scoreImageUrl = URL.createObjectURL(file);
+    state.scoreImageDataUrl = "";
+    state.scoreFileName = file.name;
+    state.scoreDraft = null;
+    state.scoreError = "";
+    state.scoreReviewMeasureIndex = 0;
+    state.scoreConfirmedMeasures = {};
+    state.scorePublished = false;
+    render();
+    fileAsDataUrl(file).then(dataUrl => {
+      if (teacherScoreFile !== file) return;
+      state.scoreImageDataUrl = dataUrl;
+      persistScoreSession();
+    }).catch(() => {});
+  });
+  app.querySelector("[data-score-title]")?.addEventListener("change", event => {
+    if (state.scoreDraft) {
+      state.scoreDraft.title = event.target.value.trim() || "未命名乐谱";
+      persistScoreSession();
+    }
+  });
+  app.querySelector("[data-score-tonic]")?.addEventListener("change", event => {
+    if (!state.scoreDraft) return;
+    state.scoreDraft.tonic = event.target.value;
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  });
+  app.querySelector("[data-score-bpm]")?.addEventListener("change", event => {
+    if (state.scoreDraft) {
+      state.scoreDraft.bpm = Math.max(36, Math.min(180, Number(event.target.value) || 72));
+      persistScoreSession();
+    }
+  });
+  app.querySelectorAll("[data-score-pitch]").forEach(select => select.addEventListener("change", () => {
+    const measureIndex = Number(select.dataset.measure);
+    const note = state.scoreDraft?.measures?.[measureIndex]?.notes?.[Number(select.dataset.note)];
+    if (!note) return;
+    const [degree, octave] = select.value.split(":").map(Number);
+    note.degree = degree;
+    note.octave = degree === 0 ? 0 : octave;
+    note.confidence = 1;
+    invalidateScoreReviewGroup(measureIndex);
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-duration]").forEach(select => select.addEventListener("change", () => {
+    const measureIndex = Number(select.dataset.measure);
+    const measure = state.scoreDraft?.measures?.[measureIndex];
+    const note = measure?.notes?.[Number(select.dataset.note)];
+    if (!measure || !note) return;
+    note.duration = Number(select.value);
+    note.confidence = 1;
+    let beat = 0;
+    measure.notes.forEach(item => {
+      item.beat = beat;
+      beat += item.duration;
+    });
+    invalidateScoreReviewGroup(measureIndex);
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-delete-note]").forEach(button => button.addEventListener("click", () => {
+    const measureIndex = Number(button.dataset.measure);
+    const measure = state.scoreDraft?.measures?.[measureIndex];
+    const noteIndex = Number(button.dataset.note);
+    if (!measure?.notes?.[noteIndex]) return;
+    invalidateScoreReviewGroup(measureIndex);
+    measure.notes.splice(noteIndex, 1);
+    let beat = 0;
+    measure.notes.forEach(note => {
+      note.beat = beat;
+      beat += note.duration;
+    });
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-add-note]").forEach(button => button.addEventListener("click", () => {
+    const measureIndex = Number(button.dataset.measure);
+    const measure = state.scoreDraft?.measures?.[measureIndex];
+    if (!measure) return;
+    const previous = measure.notes.at(-1);
+    measure.notes.push({
+      degree: previous?.degree || 1,
+      octave: previous?.octave || 0,
+      beat: scoreMeasureBeatTotal(measure),
+      duration: .5,
+      lyric: "",
+      phraseId: previous?.phraseId || "",
+      confidence: 1
+    });
+    invalidateScoreReviewGroup(measureIndex);
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-group-rhythm]").forEach(button => button.addEventListener("click", () => {
+    const groupIndex = Number(button.dataset.group);
+    const group = scoreReviewGroups(state.scoreDraft)[groupIndex];
+    const entries = group ? scoreReviewGroupNotes(group) : [];
+    const durations = button.dataset.scoreGroupRhythm.split(",").map(Number);
+    if (!group || durations.length !== entries.length) return;
+    entries.forEach((entry, index) => { entry.note.duration = durations[index]; });
+    scoreReviewGroupMeasures(group).forEach(item => {
+      let beat = 0;
+      item.measure.notes.forEach(note => {
+        note.beat = beat;
+        note.confidence = 1;
+        beat += note.duration;
+      });
+    });
+    delete state.scoreConfirmedMeasures[groupIndex];
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-rhythm]").forEach(button => button.addEventListener("click", () => {
+    const measureIndex = Number(button.dataset.measure);
+    const measure = state.scoreDraft?.measures?.[measureIndex];
+    const durations = button.dataset.scoreRhythm.split(",").map(Number);
+    if (!measure || durations.length !== measure.notes.length) return;
+    let beat = 0;
+    measure.notes.forEach((note, index) => {
+      note.duration = durations[index];
+      note.beat = beat;
+      note.confidence = 1;
+      beat += durations[index];
+    });
+    invalidateScoreReviewGroup(measureIndex);
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scorePublished = false;
+    render();
+  }));
+  app.querySelectorAll("[data-score-review-measure]").forEach(button => button.addEventListener("click", () => {
+    state.scoreReviewMeasureIndex = Number(button.dataset.scoreReviewMeasure);
+    render();
+  }));
+  app.querySelectorAll("[data-score-preview-measure]").forEach(button => button.addEventListener("click", () => {
+    state.scoreReviewMeasureIndex = Number(button.dataset.scorePreviewMeasure);
+    render();
+  }));
+  app.querySelectorAll("[data-score-lyric]").forEach(input => input.addEventListener("change", () => {
+    const measureIndex = Number(input.dataset.measure);
+    const note = state.scoreDraft?.measures?.[measureIndex]?.notes?.[Number(input.dataset.note)];
+    if (!note) return;
+    note.lyric = input.value;
+    invalidateScoreReviewGroup(measureIndex);
+    state.scorePublished = false;
+    render();
+  }));
+  const teacherPreview = app.querySelector("[data-teacher-preview]");
+  if (teacherPreview) {
+    const syncTeacherPreview = () => updateTeacherPlaybackMarker(teacherPreview.currentTime, !teacherPreview.paused);
+    let previewFrame = 0;
+    const animateTeacherPreview = () => {
+      syncTeacherPreview();
+      if (!teacherPreview.paused && teacherPreview.isConnected) previewFrame = requestAnimationFrame(animateTeacherPreview);
+    };
+    teacherPreview.addEventListener("timeupdate", syncTeacherPreview);
+    teacherPreview.addEventListener("play", () => {
+      cancelAnimationFrame(previewFrame);
+      animateTeacherPreview();
+    });
+    teacherPreview.addEventListener("pause", () => {
+      cancelAnimationFrame(previewFrame);
+      syncTeacherPreview();
+    });
+    teacherPreview.addEventListener("seeked", syncTeacherPreview);
+    teacherPreview.addEventListener("loadedmetadata", syncTeacherPreview);
+    syncTeacherPreview();
+  }
   const messageInput = app.querySelector("[data-message-input]");
   messageInput?.addEventListener("input", () => {
     state.message = messageInput.value;
@@ -429,31 +1756,1392 @@ function bindEvents() {
   bindArrangement();
 }
 
+function activeGestureSlot(group, currentTime) {
+  const timings = group.gestureIds.map((_, slotIndex) => gestureTiming(group, slotIndex));
+  const found = timings.findIndex(timing => currentTime >= timing.start && currentTime < timing.end);
+  if (found >= 0) return found;
+  return currentTime < timings[0].start ? 0 : timings.length - 1;
+}
+
+function updateGestureBeatGuide(container, timing, currentTime, isPlaying) {
+  const beats = timing.beatTimes || [];
+  let activeBeat = -1;
+  beats.forEach((beatTime, beatIndex) => {
+    if (currentTime >= beatTime) activeBeat = beatIndex;
+  });
+  if (currentTime >= timing.end) activeBeat = beats.length;
+  container.querySelectorAll("[data-gesture-beat]").forEach((dot, beatIndex) => {
+    dot.classList.toggle("current", beatIndex === activeBeat);
+    dot.classList.toggle("done", beatIndex < activeBeat);
+  });
+  const beatTime = beats[Math.min(activeBeat, beats.length - 1)];
+  container.classList.toggle("beat-hit", Boolean(isPlaying && Number.isFinite(beatTime) && currentTime - beatTime < 0.14));
+}
+
+function updateTeacherPlaybackMarker(currentTime, isPlaying) {
+  const groups = state.teacherAnalysis;
+  if (!groups.length) return;
+  let currentIndex = groups.findIndex(group => currentTime >= group.start && currentTime < group.end);
+  groups.forEach((group, groupIndex) => {
+    const card = app.querySelector(`[data-analysis-group="${groupIndex}"]`);
+    if (!card) return;
+    const progress = clamp((currentTime - group.start) / Math.max(0.01, group.end - group.start));
+    const isCurrent = groupIndex === currentIndex;
+    card.classList.toggle("playback-current", isCurrent);
+    card.classList.toggle("playback-active", isCurrent && isPlaying);
+    card.classList.toggle("playback-past", currentTime >= group.end);
+    card.style.setProperty("--teacher-group-progress", `${progress * 100}%`);
+    const activeSlot = activeGestureSlot(group, currentTime);
+    card.querySelectorAll(".teacher-gesture-choice").forEach((choice, slotIndex) => {
+      choice.classList.toggle("playback-current-gesture", isCurrent && slotIndex === activeSlot);
+      updateGestureBeatGuide(choice, gestureTiming(group, slotIndex), currentTime, isCurrent && isPlaying && slotIndex === activeSlot);
+    });
+  });
+  if (isPlaying && currentIndex >= 0 && currentIndex !== teacherPreviewMarkedGroup) {
+    teacherPreviewMarkedGroup = currentIndex;
+    app.querySelector(`[data-analysis-group="${currentIndex}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  } else if (currentIndex < 0) {
+    teacherPreviewMarkedGroup = -1;
+  }
+}
+
+function locateTeacherGroup(groupIndex) {
+  const group = state.teacherAnalysis[groupIndex];
+  const preview = app.querySelector("[data-teacher-preview]");
+  if (!group || !preview) return;
+  preview.currentTime = Math.max(0, group.start);
+  updateTeacherPlaybackMarker(preview.currentTime, true);
+  const playback = preview.play();
+  playback?.catch(() => showToast(`已定位到${formatBarRange(group.bars)}，点击播放器开始试听。`));
+}
+
+async function playSwanMelody() {
+  if (state.classPlaying) {
+    stopSwanMelody();
+    render();
+    return;
+  }
+  await preloadSwanGestureImages();
+  state.swanSection = 0;
+  state.swanProgress = 0;
+  state.classPlaying = true;
+  render();
+
+  const lessonStart = state.publishedLessonStart || 0;
+  const lessonEnd = state.publishedLessonEnd || CARMEN_EXCERPT_SECONDS;
+  const lessonDuration = Math.max(0.1, lessonEnd - lessonStart);
+  activeSwanAudio = new Audio(state.publishedLessonAudioUrl || CARMEN_AUDIO);
+  activeSwanAudio.preload = "auto";
+  activeSwanAudio.volume = 0.9;
+  const animate = () => {
+    if (!state.classPlaying || !activeSwanAudio) return;
+    state.swanProgress = Math.min(1, Math.max(0, (activeSwanAudio.currentTime - lessonStart) / lessonDuration));
+    const foundSection = state.publishedTeacherAnalysis.findIndex(group => activeSwanAudio.currentTime >= group.start && activeSwanAudio.currentTime < group.end);
+    const nextSection = foundSection < 0 ? state.publishedTeacherAnalysis.length - 1 : foundSection;
+    if (nextSection !== state.swanSection) {
+      state.swanSection = nextSection;
+      updateSwanSectionView(nextSection);
+    }
+    updateClassGestureMarker(activeSwanAudio.currentTime);
+    if (state.swanProgress >= 1) {
+      stopSwanMelody();
+      state.swanProgress = 1;
+      state.swanSection = state.publishedTeacherAnalysis.length - 1;
+      render();
+      showToast("手势活动完成了，再跟着演一次吧。");
+    } else {
+      activeSwanFrame = requestAnimationFrame(animate);
+    }
+  };
+  const begin = () => {
+    if (!activeSwanAudio) return;
+    activeSwanAudio.currentTime = lessonStart;
+    activeSwanAudio.play().then(() => {
+      activeSwanFrame = requestAnimationFrame(animate);
+    }).catch(() => {
+      stopSwanMelody({ reset: true });
+      render();
+      showToast("音乐没有成功播放，请再点一次开始。");
+    });
+  };
+  if (activeSwanAudio.readyState >= 1) begin();
+  else activeSwanAudio.addEventListener("loadedmetadata", begin, { once: true });
+}
+
+function updateClassGestureMarker(currentTime) {
+  const group = state.publishedTeacherAnalysis[state.swanSection];
+  if (!group) return;
+  const progress = clamp((currentTime - group.start) / Math.max(0.01, group.end - group.start));
+  const activeSlot = activeGestureSlot(group, currentTime);
+  app.querySelectorAll(".swan-measure-grid.is-active [data-class-gesture]").forEach((card, slotIndex) => {
+    const isCurrent = slotIndex === activeSlot;
+    const timing = gestureTiming(group, slotIndex);
+    card.classList.toggle("current-gesture", isCurrent);
+    const localProgress = clamp((currentTime - timing.start) / Math.max(0.01, timing.end - timing.start));
+    card.style.setProperty("--swan-gesture-progress", isCurrent ? `${localProgress * 100}%` : activeSlot > slotIndex ? "100%" : "0%");
+    updateGestureBeatGuide(card, timing, currentTime, isCurrent && state.classPlaying);
+  });
+}
+
+function average(values) {
+  return values.length ? values.reduce((sum, value) => sum + value, 0) / values.length : 0;
+}
+
+function median(values) {
+  if (!values.length) return 0;
+  const sorted = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function deviation(values) {
+  const center = average(values);
+  return Math.sqrt(average(values.map(value => (value - center) ** 2)));
+}
+
+function clamp(value, minimum = 0, maximum = 1) {
+  return Math.max(minimum, Math.min(maximum, value));
+}
+
+function buildEnergyEnvelope(audioBuffer, framesPerSecond = 50) {
+  const frameSize = Math.max(1, Math.floor(audioBuffer.sampleRate / framesPerSecond));
+  const frameCount = Math.floor(audioBuffer.length / frameSize);
+  const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, index) => audioBuffer.getChannelData(index));
+  const rms = new Float32Array(frameCount);
+  for (let frame = 0; frame < frameCount; frame += 1) {
+    const start = frame * frameSize;
+    const end = Math.min(audioBuffer.length, start + frameSize);
+    let sum = 0;
+    let samples = 0;
+    for (let sample = start; sample < end; sample += 4) {
+      let mono = 0;
+      channels.forEach(channel => { mono += channel[sample] || 0; });
+      mono /= channels.length;
+      sum += mono * mono;
+      samples += 1;
+    }
+    rms[frame] = Math.sqrt(sum / Math.max(1, samples));
+  }
+  const onset = new Float32Array(frameCount);
+  for (let index = 1; index < frameCount; index += 1) onset[index] = Math.max(0, rms[index] - rms[index - 1] * 0.96);
+  let scale = 0.000001;
+  for (let index = 0; index < onset.length; index += 1) scale = Math.max(scale, onset[index]);
+  for (let index = 0; index < onset.length; index += 1) onset[index] /= scale;
+  const sortedRms = Array.from(rms).sort((left, right) => left - right);
+  const strongLevel = sortedRms[Math.floor(sortedRms.length * 0.95)] || 0;
+  const quietLevel = sortedRms[Math.floor(sortedRms.length * 0.2)] || 0;
+  // 只有远低于全曲强奏的底部能量才视为环境底噪，避免把管弦乐弱奏误判成静音。
+  const noiseThreshold = quietLevel < strongLevel * 0.12 ? quietLevel * 2.4 : 0;
+  const activityThreshold = Math.max(0.00008, strongLevel * 0.018, noiseThreshold);
+  let firstActiveFrame = 0;
+  let lastActiveFrame = rms.length - 1;
+  while (firstActiveFrame < rms.length && rms[firstActiveFrame] < activityThreshold) firstActiveFrame += 1;
+  while (lastActiveFrame >= firstActiveFrame && rms[lastActiveFrame] < activityThreshold) lastActiveFrame -= 1;
+  const contentStart = firstActiveFrame < rms.length ? firstActiveFrame / framesPerSecond : 0;
+  const contentEnd = lastActiveFrame >= firstActiveFrame ? (lastActiveFrame + 1) / framesPerSecond : 0;
+  return { rms, onset, framesPerSecond, activityThreshold, contentStart, contentEnd };
+}
+
+function estimateTempo(onset, framesPerSecond) {
+  let best = { bpm: 90, score: -Infinity, lag: Math.round(framesPerSecond * 60 / 90) };
+  let secondScore = -Infinity;
+  for (let bpm = 54; bpm <= 176; bpm += 1) {
+    const lag = Math.round(framesPerSecond * 60 / bpm);
+    let dot = 0;
+    let left = 0;
+    let right = 0;
+    for (let index = lag; index < onset.length; index += 1) {
+      dot += onset[index] * onset[index - lag];
+      left += onset[index] ** 2;
+      right += onset[index - lag] ** 2;
+    }
+    const normalized = dot / Math.sqrt(Math.max(0.000001, left * right));
+    const tempoPrior = 1 - Math.min(0.12, Math.abs(bpm - 96) / 900);
+    const score = normalized * tempoPrior;
+    if (score > best.score) {
+      secondScore = best.score;
+      best = { bpm, score, lag };
+    } else if (score > secondScore) secondScore = score;
+  }
+  const confidence = clamp(0.45 + Math.max(0, best.score - secondScore) * 3 + best.score * 0.25, 0.35, 0.94);
+  return { ...best, confidence };
+}
+
+function estimateBeatGrid(onset, framesPerSecond, tempo, contentStart = 0) {
+  const lag = tempo.lag;
+  let bestPhase = 0;
+  let bestPhaseScore = -Infinity;
+  for (let phase = 0; phase < lag; phase += 1) {
+    let score = 0;
+    let count = 0;
+    for (let index = phase; index < onset.length; index += lag) {
+      score += onset[index];
+      count += 1;
+    }
+    score /= Math.max(1, count);
+    if (score > bestPhaseScore) {
+      bestPhaseScore = score;
+      bestPhase = phase;
+    }
+  }
+  const strengths = [];
+  for (let index = bestPhase; index < onset.length; index += lag) strengths.push(onset[index]);
+  const spread = deviation(strengths) || 0.001;
+  const normalizedAutocorrelation = correlationLag => {
+    let dot = 0;
+    let left = 0;
+    let right = 0;
+    for (let index = correlationLag; index < onset.length; index += 1) {
+      dot += onset[index] * onset[index - correlationLag];
+      left += onset[index] ** 2;
+      right += onset[index - correlationLag] ** 2;
+    }
+    return dot / Math.sqrt(Math.max(0.000001, left * right));
+  };
+  const meterCandidates = [];
+  [{ beats: 3, pulses: 3 }, { beats: 4, pulses: 4 }, { beats: 6, pulses: 2 }].forEach(({ beats, pulses }) => {
+    let bestForMeter = { beats, pulses, offset: 0, score: -Infinity };
+    for (let offset = 0; offset < pulses; offset += 1) {
+      const down = strengths.filter((_, index) => index % pulses === offset);
+      const others = strengths.filter((_, index) => index % pulses !== offset);
+      const contrast = (average(down) - average(others)) / spread;
+      let repeat = 0;
+      for (let index = pulses; index < strengths.length; index += 1) repeat += strengths[index] * strengths[index - pulses];
+      repeat /= Math.max(1, strengths.length - pulses);
+      const downRegularity = clamp(1 - deviation(down) / Math.max(0.05, average(down)));
+      const barPeriodicity = normalizedAutocorrelation(lag * pulses);
+      const profile = Array.from({ length: pulses }, (_, position) => average(strengths.filter((_, index) => index % pulses === position)));
+      const secondaryPosition = (offset + (beats === 6 ? 1 : 2)) % pulses;
+      const secondaryWeak = profile.filter((_, position) => position !== offset && position !== secondaryPosition);
+      const secondaryBaseline = secondaryWeak.length ? average(secondaryWeak) : average(strengths);
+      const secondaryAccent = (profile[secondaryPosition] - secondaryBaseline) / spread;
+      const primaryDominance = (profile[offset] - profile[secondaryPosition]) / spread;
+      const windowContrasts = [];
+      const windowSize = pulses * 4;
+      const windowStep = pulses * 2;
+      for (let start = 0; start + pulses * 2 <= strengths.length; start += windowStep) {
+        const slice = strengths.slice(start, Math.min(strengths.length, start + windowSize));
+        const localSpread = deviation(slice) || 0.001;
+        const localDown = slice.filter((_, localIndex) => (start + localIndex) % pulses === offset);
+        const localOthers = slice.filter((_, localIndex) => (start + localIndex) % pulses !== offset);
+        windowContrasts.push((average(localDown) - average(localOthers)) / localSpread);
+      }
+      const windowAgreement = median(windowContrasts);
+      const enoughBars = Math.min(1, strengths.length / Math.max(1, pulses * 4));
+      const prior = beats === 4 ? 0.025 : beats === 3 ? 0.018 : -0.09;
+      const compoundAccent = beats === 6
+        ? Math.max(0, secondaryAccent) * 0.07 + Math.max(-0.2, primaryDominance) * 0.16
+        : beats === 4 ? secondaryAccent * 0.05 : 0;
+      const score = (contrast * 0.44 + windowAgreement * 0.26 + repeat * 0.25 + barPeriodicity * 0.42 + downRegularity * 0.1 + compoundAccent + prior) * enoughBars;
+      if (score > bestForMeter.score) bestForMeter = { beats, pulses, offset, score, contrast, windowAgreement, repeat, barPeriodicity, downRegularity, secondaryAccent, primaryDominance };
+    }
+    meterCandidates.push(bestForMeter);
+  });
+  meterCandidates.sort((left, right) => right.score - left.score);
+  const bestMeter = meterCandidates[0];
+  const scale = Math.max(0.25, deviation(meterCandidates.map(candidate => candidate.score)));
+  const weights = meterCandidates.map(candidate => Math.exp((candidate.score - bestMeter.score) / scale));
+  const totalWeight = weights.reduce((sum, weight) => sum + weight, 0) || 1;
+  const alternatives = meterCandidates.map((candidate, index) => ({ meter: candidate.beats, confidence: weights[index] / totalWeight, score: candidate.score }));
+  const meterConfidence = alternatives[0].confidence;
+  const beatDuration = 60 / tempo.bpm;
+  const firstBeat = bestPhase / framesPerSecond;
+  const measureDuration = bestMeter.pulses * beatDuration;
+  let firstDownbeat = firstBeat + bestMeter.offset * beatDuration;
+  if (contentStart > firstDownbeat) {
+    firstDownbeat += Math.floor((contentStart - firstDownbeat) / measureDuration) * measureDuration;
+  }
+  while (firstDownbeat < contentStart - beatDuration * 0.35) firstDownbeat += measureDuration;
+  return {
+    meter: bestMeter.beats,
+    beatsPerMeasure: bestMeter.pulses,
+    firstDownbeat,
+    beatDuration,
+    meterConfidence,
+    meterAlternatives: alternatives,
+    confidence: clamp(tempo.confidence * 0.58 + meterConfidence * 0.42, 0.28, 0.96)
+  };
+}
+
+function resolveTempoAndGrid(energy) {
+  const tempo = estimateTempo(energy.onset, energy.framesPerSecond);
+  return { tempo, grid: estimateBeatGrid(energy.onset, energy.framesPerSecond, tempo, energy.contentStart) };
+}
+
+function snapToNearbyOnset(onset, framesPerSecond, predictedTime, searchRadius) {
+  const center = Math.round(predictedTime * framesPerSecond);
+  const radius = Math.max(1, Math.round(searchRadius * framesPerSecond));
+  const from = Math.max(1, center - radius);
+  const to = Math.min(onset.length - 2, center + radius);
+  let bestIndex = center;
+  let bestStrength = 0;
+  let bestScore = -Infinity;
+  for (let index = from; index <= to; index += 1) {
+    if (onset[index] < onset[index - 1] || onset[index] < onset[index + 1]) continue;
+    const proximity = 1 - Math.abs(index - center) / Math.max(1, radius);
+    const score = onset[index] * 0.78 + proximity * 0.22;
+    if (score > bestScore) {
+      bestScore = score;
+      bestStrength = onset[index];
+      bestIndex = index;
+    }
+  }
+  return bestStrength >= 0.08 ? bestIndex / framesPerSecond : predictedTime;
+}
+
+function buildAdaptiveBeatTimeline(energy, grid, duration) {
+  const baseDuration = grid.beatDuration;
+  let beatDuration = baseDuration;
+  let current = snapToNearbyOnset(energy.onset, energy.framesPerSecond, grid.firstDownbeat, baseDuration * 0.24);
+  const beatTimes = [];
+  while (current <= duration + baseDuration && beatTimes.length < 4096) {
+    beatTimes.push(current);
+    const predicted = current + beatDuration;
+    const snapped = snapToNearbyOnset(energy.onset, energy.framesPerSecond, predicted, beatDuration * 0.2);
+    const observedDuration = snapped - current;
+    const usable = observedDuration >= baseDuration * 0.78 && observedDuration <= baseDuration * 1.22;
+    current = usable ? snapped : predicted;
+    if (usable) beatDuration = clamp(beatDuration * 0.82 + observedDuration * 0.18, baseDuration * 0.86, baseDuration * 1.14);
+  }
+  return beatTimes;
+}
+
+function buildAdaptiveMeasures(energy, grid, duration) {
+  const beatTimes = buildAdaptiveBeatTimeline(energy, grid, duration);
+  const measures = [];
+  for (let beatIndex = 0; beatIndex + grid.beatsPerMeasure < beatTimes.length; beatIndex += grid.beatsPerMeasure) {
+    const start = beatTimes[beatIndex];
+    const end = beatTimes[beatIndex + grid.beatsPerMeasure];
+    if (end > duration + 0.04) break;
+    measures.push({
+      start,
+      end,
+      beatTimes: beatTimes.slice(beatIndex, beatIndex + grid.beatsPerMeasure)
+    });
+  }
+  return { beatTimes, measures };
+}
+
+function meterLabel(beats) {
+  return beats === 6 ? "6/8" : `${beats}/4`;
+}
+
+function downsampleAudio(audioBuffer, targetRate = 4000) {
+  const length = Math.floor(audioBuffer.duration * targetRate);
+  const mono = new Float32Array(length);
+  const channels = Array.from({ length: audioBuffer.numberOfChannels }, (_, index) => audioBuffer.getChannelData(index));
+  const ratio = audioBuffer.sampleRate / targetRate;
+  for (let index = 0; index < length; index += 1) {
+    const sourceIndex = Math.min(audioBuffer.length - 1, Math.floor(index * ratio));
+    let value = 0;
+    channels.forEach(channel => { value += channel[sourceIndex] || 0; });
+    mono[index] = value / channels.length;
+  }
+  return { mono, sampleRate: targetRate };
+}
+
+function estimatePitchAt(mono, sampleRate, time) {
+  const size = Math.floor(sampleRate * 0.11);
+  const center = Math.floor(time * sampleRate);
+  const start = Math.max(0, Math.min(mono.length - size, center - Math.floor(size / 2)));
+  if (start < 0 || start + size > mono.length) return null;
+  let mean = 0;
+  for (let index = 0; index < size; index += 1) mean += mono[start + index];
+  mean /= size;
+  let energy = 0;
+  for (let index = 0; index < size; index += 1) energy += (mono[start + index] - mean) ** 2;
+  if (energy / size < 0.000002) return null;
+  let bestLag = 0;
+  let bestCorrelation = 0;
+  const minimumLag = Math.floor(sampleRate / 500);
+  const maximumLag = Math.floor(sampleRate / 55);
+  for (let lag = minimumLag; lag <= maximumLag; lag += 1) {
+    let dot = 0;
+    let left = 0;
+    let right = 0;
+    for (let index = 0; index < size - lag; index += 2) {
+      const a = mono[start + index] - mean;
+      const b = mono[start + index + lag] - mean;
+      dot += a * b;
+      left += a * a;
+      right += b * b;
+    }
+    const correlation = dot / Math.sqrt(Math.max(0.000001, left * right));
+    if (correlation > bestCorrelation) {
+      bestCorrelation = correlation;
+      bestLag = lag;
+    }
+  }
+  if (bestCorrelation < 0.28 || !bestLag) return null;
+  const frequency = sampleRate / bestLag;
+  return 69 + 12 * Math.log2(frequency / 440);
+}
+
+function smoothSeries(values) {
+  return values.map((value, index) => {
+    const neighbors = values.slice(Math.max(0, index - 1), Math.min(values.length, index + 2)).filter(Number.isFinite);
+    return neighbors.length ? average(neighbors) : value;
+  });
+}
+
+function onsetPeaks(onset, framesPerSecond, start, end) {
+  const from = Math.max(1, Math.floor(start * framesPerSecond));
+  const to = Math.min(onset.length - 1, Math.ceil(end * framesPerSecond));
+  const slice = Array.from(onset.slice(from, to));
+  const threshold = average(slice) + deviation(slice) * 0.55;
+  const peaks = [];
+  for (let index = from + 1; index < to - 1; index += 1) {
+    if (onset[index] > threshold && onset[index] >= onset[index - 1] && onset[index] > onset[index + 1]) peaks.push(index / framesPerSecond);
+  }
+  return peaks;
+}
+
+function analyzeMeasure(index, start, end, pitchData, energyData, meter, beatTimes = []) {
+  const sampleTimes = Array.from({ length: 12 }, (_, sample) => start + (sample + 0.5) * (end - start) / 12);
+  const rawPitch = sampleTimes.map(time => estimatePitchAt(pitchData.mono, pitchData.sampleRate, time));
+  const valid = rawPitch.filter(Number.isFinite);
+  const fallback = valid.length ? average(valid) : 60;
+  const pitch = smoothSeries(rawPitch.map(value => Number.isFinite(value) ? value : fallback));
+  const differences = pitch.slice(1).map((value, pitchIndex) => value - pitch[pitchIndex]);
+  const netPitchChange = pitch[pitch.length - 1] - pitch[0];
+  let previousDirection = 0;
+  let turningPoints = 0;
+  differences.forEach(change => {
+    const direction = Math.abs(change) < 0.45 ? 0 : Math.sign(change);
+    if (direction && previousDirection && direction !== previousDirection) turningPoints += 1;
+    if (direction) previousDirection = direction;
+  });
+  const firstDirection = differences.find(change => Math.abs(change) >= 0.45) || 0;
+  const stableChanges = differences.filter(change => Math.abs(change) < 0.5).length;
+  const sustainRatio = stableChanges / Math.max(1, differences.length);
+  const endingChanges = differences.slice(-4);
+  const endingSustainRatio = endingChanges.filter(change => Math.abs(change) < 0.45).length / Math.max(1, endingChanges.length);
+  const peaks = onsetPeaks(energyData.onset, energyData.framesPerSecond, start, end);
+  const energyFrom = Math.max(0, Math.floor(start * energyData.framesPerSecond));
+  const energyTo = Math.min(energyData.rms.length, Math.ceil(end * energyData.framesPerSecond));
+  const measureEnergy = Array.from(energyData.rms.slice(energyFrom, energyTo));
+  const peakEnergy = measureEnergy.length ? Math.max(...measureEnergy) : 0;
+  const activeFrameRatio = measureEnergy.filter(value => value >= energyData.activityThreshold).length / Math.max(1, measureEnergy.length);
+  const isSilent = peakEnergy < energyData.activityThreshold * 1.15 && activeFrameRatio < 0.08;
+  const intervals = peaks.slice(1).map((time, peakIndex) => time - peaks[peakIndex]);
+  const rhythmRegularity = intervals.length >= 2 ? clamp(1 - deviation(intervals) / Math.max(0.05, average(intervals))) : 0.5;
+  let contour = "flat";
+  let pitchDirection = "steady";
+  if (turningPoints >= 3) {
+    contour = "wave";
+    pitchDirection = "mixed";
+  } else if (turningPoints >= 1 && firstDirection > 0 && Math.abs(netPitchChange) < 4) {
+    contour = "arch";
+    pitchDirection = "up_down";
+  } else if (turningPoints >= 1 && firstDirection < 0 && Math.abs(netPitchChange) < 4) {
+    contour = "valley";
+    pitchDirection = "down_up";
+  } else if (netPitchChange >= 2) {
+    contour = "rise";
+    pitchDirection = "up";
+  } else if (netPitchChange <= -2) {
+    contour = "fall";
+    pitchDirection = "down";
+  } else if (peaks.length >= Math.max(3, meter - 1)) contour = "pulse";
+  const noteDensity = peaks.length <= 2 ? "sparse" : peaks.length >= meter + 2 ? "dense" : "medium";
+  return {
+    measureNumber: index + 1,
+    start,
+    end,
+    beatTimes,
+    isSilent,
+    peakEnergy,
+    activeFrameRatio,
+    pitch,
+    contour,
+    pitchDirection,
+    turningPoints,
+    netPitchChange,
+    sustainRatio,
+    endingSustainRatio,
+    accentCount: peaks.length,
+    noteDensity,
+    rhythmRegularity,
+    endingPitchNearStartingPitch: Math.abs(netPitchChange) < 1.2,
+    validPitchRatio: valid.length / rawPitch.length
+  };
+}
+
+function contourSimilarity(left, right) {
+  const leftCenter = average(left.pitch);
+  const rightCenter = average(right.pitch);
+  const difference = average(left.pitch.map((value, index) => Math.abs((value - leftCenter) - (right.pitch[index] - rightCenter))));
+  const contourBonus = left.contour === right.contour ? 0.18 : 0;
+  return clamp(Math.exp(-difference / 3.2) + contourBonus, 0, 1);
+}
+
+function boundaryContinuity(left, right, energyData) {
+  const boundaryFrame = Math.round(left.end * energyData.framesPerSecond);
+  const around = Array.from(energyData.rms.slice(Math.max(0, boundaryFrame - 3), Math.min(energyData.rms.length, boundaryFrame + 4)));
+  const localEnergy = average(around);
+  const overallEnergy = average(Array.from(energyData.rms)) || 0.001;
+  const energyContinuity = clamp(localEnergy / overallEnergy, 0, 1);
+  const pitchContinuity = clamp(1 - Math.abs(left.pitch[left.pitch.length - 1] - right.pitch[0]) / 8);
+  return energyContinuity * 0.45 + pitchContinuity * 0.55;
+}
+
+function gestureForMeasure(measure, meter) {
+  if (measure.isSilent) return "rest_line";
+  if (measure.endingSustainRatio >= 0.6 && measure.accentCount >= 1) return "accent_hold";
+  if (meter === 3) {
+    const pitchRange = Math.max(...measure.pitch) - Math.min(...measure.pitch);
+    if (measure.accentCount >= 3 && measure.rhythmRegularity >= 0.58) return "three_peaks";
+    if (measure.endingPitchNearStartingPitch && measure.turningPoints >= 4) return "three_petal";
+    if (measure.endingPitchNearStartingPitch && measure.turningPoints >= 2) return pitchRange >= 6 ? "spiral" : "infinity";
+    if (measure.contour === "arch" || measure.contour === "valley") return "three_beat_sweep";
+    if (measure.contour === "wave") return "waltz_sway";
+  }
+  if (measure.contour === "arch") return "arch";
+  if (measure.contour === "valley") return "valley";
+  if (measure.contour === "wave") return "wave";
+  if (measure.contour === "rise") return measure.noteDensity === "sparse" && measure.turningPoints === 0 ? "rise" : meter === 3 ? "climb_arcs_three" : meter === 4 ? "climb_arcs" : "rise";
+  if (measure.contour === "fall") return measure.noteDensity === "sparse" && measure.turningPoints === 0 ? "fall" : meter === 3 ? "descend_arcs_three" : meter === 4 ? "descend_arcs" : "fall";
+  if (measure.contour === "pulse") return meter === 3 ? "three_peaks" : meter === 4 ? (measure.rhythmRegularity >= 0.62 ? "bounces" : "pulses") : "wave";
+  if (measure.endingPitchNearStartingPitch && measure.turningPoints >= 2) return "circle";
+  if (measure.accentCount >= Math.max(3, meter - 1) && measure.rhythmRegularity >= 0.65) return meter === 4 ? "square" : "triangle";
+  return measure.sustainRatio >= 0.58 ? "hold" : meter === 3 ? "waltz_sway" : meter === 4 ? "bounces" : "wave";
+}
+
+function trimTrailingSilentMeasures(measures) {
+  let end = measures.length;
+  while (end > 0 && measures[end - 1].isSilent) end -= 1;
+  return {
+    measures: measures.slice(0, end),
+    removedCount: measures.length - end
+  };
+}
+
+function gesturePacingForMeasures(measures) {
+  const secondsPerMeasure = average(measures.map(measure => measure.end - measure.start));
+  const barsPerGesture = secondsPerMeasure < 3.2 ? 2 : 1;
+  return {
+    secondsPerMeasure,
+    barsPerGesture,
+    label: barsPerGesture === 2 ? "快速 · 2 小节完成 1 个手势" : "舒缓 · 1 小节完成 1 个手势"
+  };
+}
+
+function gestureForFastPair(current, next, meter) {
+  const currentGesture = gestureForMeasure(current, meter);
+  const nextGesture = gestureForMeasure(next, meter);
+  const combinedPitch = [...current.pitch, ...next.pitch];
+  const phraseStart = average(combinedPitch.slice(0, 4));
+  const phraseMiddle = average(combinedPitch.slice(9, 15));
+  const phraseEnd = average(combinedPitch.slice(-4));
+  const totalChange = phraseEnd - phraseStart;
+  const returnDistance = Math.abs(totalChange);
+  const pitchRange = Math.max(...combinedPitch) - Math.min(...combinedPitch);
+  const turningPoints = current.turningPoints + next.turningPoints;
+  const accentCount = current.accentCount + next.accentCount;
+  const averageSustain = (current.sustainRatio + next.sustainRatio) / 2;
+  const averageRegularity = (current.rhythmRegularity + next.rhythmRegularity) / 2;
+  const roundedReturn = returnDistance <= 1.8 && turningPoints >= 2;
+
+  if (averageSustain >= 0.7) return accentCount >= 2 ? "accent_hold" : "hold";
+  if (next.endingSustainRatio >= 0.58) return accentCount >= 2 ? "accent_hold" : "hold";
+  if (meter === 3) {
+    // 三拍子先判断两小节是否形成完整乐句，再判断局部上行或下行。
+    if (roundedReturn && turningPoints >= 5) return pitchRange >= 6 ? "spiral" : "three_petal";
+    if (roundedReturn && pitchRange >= 5) return "circle";
+    if (roundedReturn) return "infinity";
+    if (phraseMiddle - Math.max(phraseStart, phraseEnd) >= 1.8) return "arch";
+    if (Math.min(phraseStart, phraseEnd) - phraseMiddle >= 1.8) return "three_beat_sweep";
+    if (accentCount >= 6 && averageRegularity >= 0.58) return "three_peaks";
+    if (totalChange >= 4) return "climb_arcs_three";
+    if (totalChange <= -4) return "descend_arcs_three";
+    if (totalChange >= 2.2) return current.noteDensity === "sparse" && next.noteDensity === "sparse" ? "rise" : "climb_arcs_three";
+    if (totalChange <= -2.2) return current.noteDensity === "sparse" && next.noteDensity === "sparse" ? "fall" : "descend_arcs_three";
+    if (currentGesture === nextGesture) return currentGesture;
+    if (turningPoints >= 6) return "three_petal";
+    return "waltz_sway";
+  }
+  if (roundedReturn && pitchRange >= 5) return "circle";
+  if (phraseMiddle - Math.max(phraseStart, phraseEnd) >= 1.5) return "arch";
+  if (Math.min(phraseStart, phraseEnd) - phraseMiddle >= 1.5) return "valley";
+  if (totalChange >= 3) return meter === 4 ? "climb_arcs" : "rise";
+  if (totalChange <= -3) return meter === 4 ? "descend_arcs" : "fall";
+  if (currentGesture === nextGesture) return currentGesture;
+  if (turningPoints >= 4) return "wave";
+  return current.accentCount + current.turningPoints >= next.accentCount + next.turningPoints ? currentGesture : nextGesture;
+}
+
+const gestureVariationFamilies = {
+  wave: ["wave", "arch", "valley", "circle"],
+  circle: ["circle", "infinity", "arch", "wave"],
+  arch: ["arch", "wave", "circle"],
+  valley: ["valley", "wave", "circle"],
+  climb_arcs: ["climb_arcs", "rise", "arch"],
+  rise: ["rise", "climb_arcs", "arch"],
+  descend_arcs: ["descend_arcs", "fall", "valley"],
+  fall: ["fall", "descend_arcs", "valley"],
+  climb_arcs_three: ["climb_arcs_three", "rise", "waltz_sway"],
+  descend_arcs_three: ["descend_arcs_three", "fall", "three_beat_sweep"],
+  hold: ["hold", "accent_hold", "wave"],
+  accent_hold: ["accent_hold", "hold", "arch"],
+  bounces: ["bounces", "pulses", "square", "triangle"],
+  pulses: ["pulses", "bounces", "triangle", "square"],
+  waltz_sway: ["waltz_sway", "three_beat_sweep", "infinity", "three_petal"],
+  three_beat_sweep: ["three_beat_sweep", "waltz_sway", "spiral", "infinity"],
+  three_petal: ["three_petal", "infinity", "spiral", "three_peaks"],
+  infinity: ["infinity", "spiral", "three_petal", "waltz_sway"],
+  spiral: ["spiral", "infinity", "three_petal", "three_beat_sweep"],
+  three_peaks: ["three_peaks", "triangle", "three_petal", "waltz_sway"]
+};
+
+function diversifyGestureSequence(groups) {
+  let previousGesture = null;
+  let sameGestureRun = 0;
+  const recentlyUsed = [];
+  groups.forEach((group, groupIndex) => {
+    const primary = group.gestureIds[0];
+    sameGestureRun = primary === previousGesture ? sameGestureRun + 1 : 1;
+    if (sameGestureRun > 2 && gestureVariationFamilies[primary]) {
+      const candidates = gestureVariationFamilies[primary];
+      const alternate = candidates.find(candidate => candidate !== primary && !recentlyUsed.slice(-5).includes(candidate))
+        || candidates[(groupIndex + 1) % candidates.length];
+      group.gestureIds = group.gestureIds.map(gestureId => gestureId === primary ? alternate : gestureId);
+      group.reason += ` 连续动作已达到两组，改用同类变化“${gestureById(alternate).name}”，避免重复疲劳。`;
+      group.diversified = true;
+      previousGesture = alternate;
+      sameGestureRun = 1;
+      recentlyUsed.push(alternate);
+    } else {
+      previousGesture = primary;
+      recentlyUsed.push(primary);
+    }
+  });
+  return groups;
+}
+
+function groupAnalyzedMeasures(measures, energyData, meter) {
+  const groups = [];
+  const pacing = gesturePacingForMeasures(measures);
+  for (let index = 0; index < measures.length; index += 2) {
+    const current = measures[index];
+    const next = measures[index + 1];
+    if (!next) {
+      const gesture = gestureForMeasure(current, meter);
+      groups.push({
+        bars: [current.measureNumber, current.measureNumber],
+        mode: current.isSilent ? "rest" : "merged",
+        gestureIds: [gesture],
+        reason: current.isSilent ? "这一小节是休止，用水平线表示声音停住。" : `最后一个完整小节单独呈现，匹配为${gestureById(gesture).name}。`,
+        start: current.start,
+        end: current.end,
+        beatTimes: [...current.beatTimes],
+        gestureTimings: [{ start: current.start, end: current.end, beatTimes: [...current.beatTimes] }],
+        confidence: clamp(current.validPitchRatio * 0.65 + 0.25, 0.35, 0.93)
+      });
+      continue;
+    }
+    const currentGesture = gestureForMeasure(current, meter);
+    const nextGesture = gestureForMeasure(next, meter);
+    if (current.isSilent || next.isSilent) {
+      groups.push({
+        bars: [current.measureNumber, next.measureNumber],
+        mode: "split",
+        gestureIds: [currentGesture, nextGesture],
+        reason: "有声音的小节根据旋律匹配手势；休止小节用水平线表示停住。",
+        start: current.start,
+        end: next.end,
+        beatTimes: [...current.beatTimes, ...next.beatTimes],
+        gestureTimings: [
+          { start: current.start, end: current.end, beatTimes: [...current.beatTimes] },
+          { start: next.start, end: next.end, beatTimes: [...next.beatTimes] }
+        ],
+        confidence: clamp((current.validPitchRatio + next.validPitchRatio) / 2 * 0.6 + 0.22, 0.35, 0.86)
+      });
+      continue;
+    }
+    const similarity = contourSimilarity(current, next);
+    const continuity = boundaryContinuity(current, next, energyData);
+    if (pacing.barsPerGesture === 2) {
+      const gesture = gestureForFastPair(current, next, meter);
+      groups.push({
+        bars: [current.measureNumber, next.measureNumber],
+        mode: "merged",
+        gestureIds: [gesture],
+        reason: `每小节约 ${pacing.secondsPerMeasure.toFixed(1)} 秒，两个小节合成一个完整动作，让儿童有足够时间做完。`,
+        start: current.start,
+        end: next.end,
+        beatTimes: [...current.beatTimes, ...next.beatTimes],
+        gestureTimings: [{ start: current.start, end: next.end, beatTimes: [...current.beatTimes, ...next.beatTimes] }],
+        confidence: clamp((current.validPitchRatio + next.validPitchRatio) / 2 * 0.6 + 0.28, 0.42, 0.92)
+      });
+      continue;
+    }
+    let mode = "split";
+    let gestureIds = [currentGesture, nextGesture];
+    let reason = `第 ${current.measureNumber} 小节是${gestureById(currentGesture).name}，第 ${next.measureNumber} 小节是${gestureById(nextGesture).name}。`;
+    let confidence = clamp((current.validPitchRatio + next.validPitchRatio) / 2 * 0.65 + 0.25, 0.35, 0.93);
+    if (continuity >= 0.74 || (next.sustainRatio >= 0.67 && continuity >= 0.56)) {
+      mode = "merged";
+      const mergedGesture = next.sustainRatio >= 0.67 ? (current.accentCount ? "accent_hold" : "hold") : currentGesture;
+      gestureIds = [mergedGesture];
+      reason = next.sustainRatio >= 0.67 ? "第二小节以持续音为主，延续前一动作并保持。" : "小节线前后旋律连续，合并为一个完整动作。";
+      confidence = clamp(continuity, 0.45, 0.94);
+    } else if (similarity >= 0.78 || currentGesture === nextGesture) {
+      mode = "repeat";
+      gestureIds = [currentGesture, currentGesture];
+      reason = similarity >= 0.78 ? "两个小节的旋律轮廓高度相似，重复同一个动作。" : "两个小节属于同一种主要运动方向，重复同一个动作。";
+      confidence = clamp(similarity, 0.5, 0.96);
+    }
+    groups.push({
+      bars: [current.measureNumber, next.measureNumber],
+      mode,
+      gestureIds,
+      reason,
+      start: current.start,
+      end: next.end,
+      beatTimes: [...current.beatTimes, ...next.beatTimes],
+      gestureTimings: mode === "merged"
+        ? [{ start: current.start, end: next.end, beatTimes: [...current.beatTimes, ...next.beatTimes] }]
+        : [
+          { start: current.start, end: current.end, beatTimes: [...current.beatTimes] },
+          { start: next.start, end: next.end, beatTimes: [...next.beatTimes] }
+        ],
+      confidence
+    });
+  }
+  return diversifyGestureSequence(groups);
+}
+
+function analyzeAudioBuffer(audioBuffer) {
+  if (audioBuffer.duration < 4) throw new Error("音乐太短，至少需要 4 秒。");
+  const energy = buildEnergyEnvelope(audioBuffer);
+  const { tempo, grid } = resolveTempoAndGrid(energy);
+  const adaptiveTimeline = buildAdaptiveMeasures(energy, grid, audioBuffer.duration);
+  const candidateMeasureCount = adaptiveTimeline.measures.length;
+  if (candidateMeasureCount < 2) throw new Error("没有识别到两个完整小节，请换一段节拍更清楚的音乐。");
+  const pitchData = downsampleAudio(audioBuffer);
+  const analyzedMeasures = adaptiveTimeline.measures.map((window, index) => {
+    return analyzeMeasure(index, window.start, window.end, pitchData, energy, grid.meter, window.beatTimes);
+  });
+  const trimmed = trimTrailingSilentMeasures(analyzedMeasures);
+  const measures = trimmed.measures;
+  const measureCount = measures.length;
+  if (measureCount < 2) throw new Error("有效音乐不足两个小节，请检查音频内容。");
+  const groups = groupAnalyzedMeasures(measures, energy, grid.meter);
+  const pacing = gesturePacingForMeasures(measures);
+  return {
+    groups,
+    meta: {
+      meter: meterLabel(grid.meter),
+      bpm: tempo.bpm,
+      measureCount,
+      method: "本地有效音乐区间、节拍结构与音高轮廓分析",
+      confidence: grid.confidence,
+      meterConfidence: grid.meterConfidence,
+      meterAlternatives: grid.meterAlternatives,
+      duration: audioBuffer.duration,
+      contentStart: energy.contentStart,
+      contentEnd: energy.contentEnd,
+      trailingSilentMeasureCount: trimmed.removedCount,
+      firstDownbeat: adaptiveTimeline.measures[0]?.start ?? grid.firstDownbeat,
+      beatTimes: adaptiveTimeline.beatTimes.filter(time => time <= measures[measures.length - 1].end),
+      secondsPerMeasure: pacing.secondsPerMeasure,
+      barsPerGesture: pacing.barsPerGesture,
+      gesturePacing: pacing.label
+    }
+  };
+}
+
+function waitForAnalysisPaint() {
+  return new Promise(resolve => {
+    if (typeof requestAnimationFrame === "function") requestAnimationFrame(() => requestAnimationFrame(resolve));
+    else setTimeout(resolve, 0);
+  });
+}
+
+async function reportTeacherAnalysisProgress(percent, label, detail = "") {
+  state.teacherAnalysisProgress = { percent: Math.round(percent), label, detail };
+  render();
+  await waitForAnalysisPaint();
+}
+
+async function analyzeAudioBufferWithProgress(audioBuffer) {
+  if (audioBuffer.duration < 4) throw new Error("音乐太短，至少需要 4 秒。");
+  await reportTeacherAnalysisProgress(24, "正在读取声音强弱变化", "从音频波形中寻找节拍落点");
+  const energy = buildEnergyEnvelope(audioBuffer);
+  await reportTeacherAnalysisProgress(32, "正在估算节拍速度", "比较整首音乐中的重复节奏");
+  const { tempo, grid } = resolveTempoAndGrid(energy);
+  await reportTeacherAnalysisProgress(40, "正在划分小节", `全曲综合识别 ${Math.round(tempo.bpm)} BPM · ${meterLabel(grid.meter)}`);
+  const adaptiveTimeline = buildAdaptiveMeasures(energy, grid, audioBuffer.duration);
+  const candidateMeasureCount = adaptiveTimeline.measures.length;
+  if (candidateMeasureCount < 2) throw new Error("没有识别到两个完整小节，请换一段节拍更清楚的音乐。");
+  await reportTeacherAnalysisProgress(46, "正在读取旋律轮廓", `识别到 ${candidateMeasureCount} 个候选小节，准备检查声音与旋律`);
+  const pitchData = downsampleAudio(audioBuffer);
+  const measures = [];
+  for (let index = 0; index < candidateMeasureCount; index += 1) {
+    const window = adaptiveTimeline.measures[index];
+    measures.push(analyzeMeasure(index, window.start, window.end, pitchData, energy, grid.meter, window.beatTimes));
+    if ((index + 1) % 2 === 0 || index === candidateMeasureCount - 1) {
+      const percent = 46 + (index + 1) / candidateMeasureCount * 42;
+      await reportTeacherAnalysisProgress(percent, "正在逐小节分析旋律", `已分析 ${index + 1} / ${candidateMeasureCount} 个候选小节`);
+    }
+  }
+  const trimmed = trimTrailingSilentMeasures(measures);
+  measures.splice(0, measures.length, ...trimmed.measures);
+  const measureCount = measures.length;
+  if (measureCount < 2) throw new Error("有效音乐不足两个小节，请检查音频内容。");
+  await reportTeacherAnalysisProgress(92, "正在匹配手势图", "比较相邻小节，判断分别呈现、重复或合并");
+  const groups = groupAnalyzedMeasures(measures, energy, grid.meter);
+  const pacing = gesturePacingForMeasures(measures);
+  await reportTeacherAnalysisProgress(100, "分析完成", `已为 ${measureCount} 个小节生成 ${groups.length} 组手势`);
+  return {
+    groups,
+    meta: {
+      meter: meterLabel(grid.meter),
+      bpm: tempo.bpm,
+      measureCount,
+      method: "本地有效音乐区间、节拍结构与音高轮廓分析",
+      confidence: grid.confidence,
+      meterConfidence: grid.meterConfidence,
+      meterAlternatives: grid.meterAlternatives,
+      duration: audioBuffer.duration,
+      contentStart: energy.contentStart,
+      contentEnd: energy.contentEnd,
+      trailingSilentMeasureCount: trimmed.removedCount,
+      firstDownbeat: adaptiveTimeline.measures[0]?.start ?? grid.firstDownbeat,
+      beatTimes: adaptiveTimeline.beatTimes.filter(time => time <= measures[measures.length - 1].end),
+      secondsPerMeasure: pacing.secondsPerMeasure,
+      barsPerGesture: pacing.barsPerGesture,
+      gesturePacing: pacing.label
+    }
+  };
+}
+
+function fileAsDataUrl(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result));
+    reader.addEventListener("error", () => reject(new Error("无法读取这张乐谱图片。")));
+    reader.readAsDataURL(file);
+  });
+}
+
+function refreshScoreDerivedData(score) {
+  const tonicMidi = { C: 60, D: 62, E: 64, F: 65, G: 67, A: 69, B: 71 }[score.tonic] || 60;
+  const intervals = [0, 0, 2, 4, 5, 7, 9, 11];
+  const syllables = ["rest", "do", "re", "mi", "fa", "sol", "la", "si"];
+  const beatsPerMeasure = score.meter.beats * 4 / score.meter.unit;
+  let offset = 0;
+  score.notes = [];
+  score.measures.forEach(measure => {
+    let contentDuration = 0;
+    measure.notes.forEach(note => {
+      note.solfege = syllables[note.degree];
+      note.startBeat = Number((offset + note.beat).toFixed(3));
+      note.frequency = note.degree === 0 ? 0 : Number((440 * 2 ** ((tonicMidi + intervals[note.degree] + note.octave * 12 - 69) / 12)).toFixed(3));
+      contentDuration = Math.max(contentDuration, note.beat + note.duration);
+      score.notes.push(note);
+    });
+    const writtenMeasureBeats = Number(measure.beats) || beatsPerMeasure;
+    offset += measure.pickup ? contentDuration : Math.max(writtenMeasureBeats, contentDuration);
+  });
+  score.totalBeats = Math.max(...score.notes.map(note => note.startBeat + note.duration), 0);
+}
+
+function changeScoreReviewMeasure(direction) {
+  const count = state.scoreDraft ? scoreReviewGroups(state.scoreDraft).length : 1;
+  state.scoreReviewMeasureIndex = Math.max(0, Math.min(count - 1, state.scoreReviewMeasureIndex + direction));
+  render();
+}
+
+function previewScoreMeasure() {
+  const score = state.scoreDraft;
+  const group = score ? scoreReviewGroups(score)[state.scoreReviewMeasureIndex] : null;
+  if (!score || !group) return;
+  clearTimers();
+  stopSolfegeNodes();
+  refreshScoreDerivedData(score);
+  const ctx = getAudioContext();
+  const beatSeconds = 60 / Math.max(36, score.bpm || 72);
+  const start = ctx.currentTime + .08;
+  let groupBeatOffset = 0;
+  [group.pickup?.measure, group.main.measure].filter(Boolean).forEach(measure => {
+    measure.notes.forEach(note => {
+      if (note.degree === 0) return;
+      schedulePianoNote(note.frequency, start + (groupBeatOffset + note.beat) * beatSeconds, Math.max(.18, note.duration * beatSeconds * .98), .15);
+    });
+    groupBeatOffset += scoreMeasureBeatTotal(measure);
+  });
+}
+
+function confirmScoreMeasure() {
+  const score = state.scoreDraft;
+  const groups = score ? scoreReviewGroups(score) : [];
+  const group = groups[state.scoreReviewMeasureIndex];
+  if (!score || !group) return;
+  const invalidMeasure = [group.pickup?.measure, group.main.measure].filter(Boolean).find(measure => {
+    const expected = scoreExpectedMeasureBeats(score, measure);
+    return Math.abs(scoreMeasureBeatTotal(measure) - expected) >= .001;
+  });
+  if (invalidMeasure) return showToast("这个小节的长度还不正确，请先修改音符长度。");
+  state.scoreConfirmedMeasures[state.scoreReviewMeasureIndex] = true;
+  [group.pickup?.measure, group.main.measure].filter(Boolean).forEach(measure => measure.notes.forEach(note => { note.confidence = 1; }));
+  const nextUnconfirmed = groups.findIndex((_, index) => index > state.scoreReviewMeasureIndex && !state.scoreConfirmedMeasures[index]);
+  if (nextUnconfirmed >= 0) state.scoreReviewMeasureIndex = nextUnconfirmed;
+  render();
+}
+
+async function analyzeScore() {
+  if (!teacherScoreFile) return;
+  state.scoreStep = "analyzing";
+  state.scoreError = "";
+  render();
+  try {
+    const imageDataUrl = await fileAsDataUrl(teacherScoreFile);
+    const response = await fetch("/api/score/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fileName: teacherScoreFile.name, imageDataUrl })
+    });
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error(result.error || "AI 没有成功读取这张乐谱。");
+    state.scoreDraft = result.score;
+    refreshScoreDerivedData(state.scoreDraft);
+    state.scoreReviewMeasureIndex = 0;
+    state.scoreConfirmedMeasures = {};
+    state.scoreStep = "review";
+    state.scorePublished = false;
+  } catch (error) {
+    state.scoreStep = "input";
+    state.scoreError = location.protocol === "file:"
+      ? "乐谱识别需要通过“启动唱名教学原型.cmd”打开，不能直接双击网页。"
+      : (error.message || "乐谱分析失败，请重试。");
+  }
+  render();
+}
+
+function loadScoreDemo() {
+  state.scoreDraft = structuredClone(DONGFANGHONG_SCORE);
+  state.scoreDraft.source = "model-draft";
+  state.scoreDraft.confidence = .87;
+  state.scoreDraft.warnings = ["模型已预填数字和小节，请重点确认黄色音符与节奏模板。"];
+  [[1, 1], [3, 2], [10, 1]].forEach(([measureIndex, noteIndex]) => {
+    const note = state.scoreDraft.measures[measureIndex]?.notes?.[noteIndex];
+    if (note) note.confidence = .62;
+  });
+  refreshScoreDerivedData(state.scoreDraft);
+  state.scoreFileName = "东方红·模型预生成草稿.jpg";
+  state.scoreImageUrl = "assets/music/dongfanghong/score.jpg";
+  state.scoreError = "";
+  state.scoreReviewMeasureIndex = 0;
+  state.scoreConfirmedMeasures = {};
+  state.scoreStep = "review";
+  state.scorePublished = false;
+  render();
+}
+
+function publishScore() {
+  if (!state.scoreDraft) return;
+  if (scoreReviewGroups(state.scoreDraft).some((_, index) => !state.scoreConfirmedMeasures[index])) return showToast("请先确认全部小节，再生成钢琴与唱名。");
+  refreshScoreDerivedData(state.scoreDraft);
+  state.scoreDraft.source = "human-verified";
+  state.publishedSolfegeLesson = structuredClone(state.scoreDraft);
+  state.scorePublished = true;
+  state.scoreStep = "published";
+  render();
+  showToast("唱名教学已确认，可以打开儿童端预览。");
+}
+
+function resetScore() {
+  if (state.scoreImageUrl?.startsWith("blob:")) URL.revokeObjectURL(state.scoreImageUrl);
+  teacherScoreFile = null;
+  state.scoreFileName = "";
+  state.scoreImageUrl = "";
+  state.scoreImageDataUrl = "";
+  state.scoreDraft = null;
+  state.scoreError = "";
+  state.scoreReviewMeasureIndex = 0;
+  state.scoreConfirmedMeasures = {};
+  state.scoreStep = "input";
+  state.scorePublished = false;
+  render();
+}
+
+async function analyzeTeacherSong() {
+  if (!teacherAudioFile) return;
+  clearTimers();
+  state.teacherStep = "analyzing";
+  state.teacherAnalysisProgress = { percent: 2, label: "正在准备音频", detail: "确认文件并建立本次分析任务" };
+  state.teacherPublished = false;
+  state.teacherEditing = null;
+  render();
+  await waitForAnalysisPaint();
+  try {
+    await reportTeacherAnalysisProgress(8, "正在读取上传文件", `${teacherAudioFile.name} · ${(teacherAudioFile.size / 1024 / 1024).toFixed(1)} MB`);
+    const context = getAudioContext();
+    const arrayBuffer = await teacherAudioFile.arrayBuffer();
+    await reportTeacherAnalysisProgress(16, "正在解码音频", "转换为可分析的声音数据");
+    const decodedAudio = await context.decodeAudioData(arrayBuffer.slice(0));
+    const result = await analyzeAudioBufferWithProgress(decodedAudio);
+    state.teacherAnalysis = result.groups;
+    state.teacherAnalysisMeta = result.meta;
+    state.teacherStep = "review";
+    render();
+    showToast("音频分析完成，请老师确认每组小节。" );
+    return true;
+  } catch (error) {
+    state.teacherStep = "input";
+    render();
+    showToast(error?.message || "没有成功分析这首音乐，请换一个音频文件再试。" );
+    return false;
+  }
+}
+
+function applyCuratedCarmenPlan(plan) {
+  const planByBars = new Map(plan.groups.map(group => [`${group.bars[0]}-${group.bars[1]}`, group]));
+  state.teacherAnalysis = state.teacherAnalysis.map(group => {
+    const curated = planByBars.get(`${group.bars[0]}-${group.bars[1]}`);
+    if (!curated || !curated.gestureIds.every(id => gestureLibrary.some(gesture => gesture.id === id))) return group;
+    return {
+      ...group,
+      mode: curated.gestureIds.length > 1 ? "split" : "merged",
+      gestureIds: [...curated.gestureIds],
+      reason: "已套用老师确认的《卡门》课程手势。"
+    };
+  });
+  state.teacherAnalysisMeta = { ...state.teacherAnalysisMeta, curated: true };
+  render();
+  showToast("已载入老师确认的《卡门》课程手势方案。" );
+}
+
+function buildCarmenLessonGroups(plan) {
+  if (!Array.isArray(plan.groups) || plan.groups.length !== plan.groupStartSeconds?.length) return [];
+  return plan.groups.map((group, index) => {
+    const start = plan.groupStartSeconds[index];
+    const end = plan.groupStartSeconds[index + 1] ?? plan.lessonEndSec;
+    const beatCount = Math.max(1, (group.bars[1] - group.bars[0] + 1) * 3);
+    const beatTimes = Array.from({ length: beatCount }, (_, beatIndex) => start + beatIndex * (end - start) / beatCount);
+    return {
+      bars: [...group.bars],
+      mode: group.gestureIds.length > 1 ? "split" : "merged",
+      gestureIds: [...group.gestureIds],
+      reason: "老师确认的《卡门》课程手势。",
+      start,
+      end,
+      beatTimes,
+      gestureTimings: [{ start, end, beatTimes }],
+      confidence: 1,
+      curated: true
+    };
+  });
+}
+
+function fixedDemoAsset(section, key, fallback) {
+  return fixedDemoManifest?.[section]?.[key] || fallback;
+}
+
+function normalizeFixedDemoScore(score) {
+  if (!score || !Array.isArray(score.measures) || score.measures.length !== 16) return null;
+  const normalized = structuredClone(score);
+  normalized.measures.forEach(measure => {
+    const phraseId = `page${Math.ceil(Number(measure.number) / 4)}`;
+    measure.notes = (measure.notes || []).map(note => ({ ...note, phraseId }));
+  });
+  refreshScoreDerivedData(normalized);
+  normalized.source = "human-curated-fixed-demo";
+  return normalized;
+}
+
+async function hydrateBuiltInCarmenLesson(planOverride = null) {
+  try {
+    const plan = planOverride || await fetch(fixedDemoAsset("gestureLesson", "plan", CARMEN_GESTURE_PLAN), { cache: "no-store" }).then(response => response.ok ? response.json() : null);
+    if (!plan) return;
+    const lessonGroups = buildCarmenLessonGroups(plan);
+    if (!lessonGroups.length) return;
+    state.publishedTeacherAnalysis = lessonGroups;
+    state.publishedLessonTitle = CARMEN_TITLE;
+    state.publishedLessonAudioUrl = fixedDemoAsset("gestureLesson", "audio", CARMEN_AUDIO);
+    state.publishedLessonMeter = plan.meter;
+    state.publishedLessonStart = lessonGroups[0].start;
+    state.publishedLessonEnd = lessonGroups[lessonGroups.length - 1].end;
+    state.swanSection = Math.min(state.swanSection, lessonGroups.length - 1);
+    if (state.screen === "feel-melody" || state.screen === "feel") render();
+  } catch {
+    // 内置方案读取失败时保留原有示例，避免阻塞其他功能。
+  }
+}
+
+async function hydrateFixedDemoPack() {
+  try {
+    const manifestResponse = await fetch(FIXED_DEMO_MANIFEST, { cache: "no-store" });
+    if (!manifestResponse.ok) throw new Error("固定演示清单不可用");
+    fixedDemoManifest = await manifestResponse.json();
+    const planPath = fixedDemoAsset("gestureLesson", "plan", CARMEN_GESTURE_PLAN);
+    const scorePath = fixedDemoAsset("solfegeLesson", "score", FIXED_DEMO_SCORE);
+    const [planResponse, scoreResponse] = await Promise.all([
+      fetch(planPath, { cache: "no-store" }),
+      fetch(scorePath, { cache: "no-store" })
+    ]);
+    if (planResponse.ok) await hydrateBuiltInCarmenLesson(await planResponse.json());
+    if (scoreResponse.ok && !savedScoreSession) {
+      const score = normalizeFixedDemoScore(await scoreResponse.json());
+      if (score) {
+        state.publishedSolfegeLesson = score;
+        if (state.screen === "feel-sing") render();
+      }
+    }
+  } catch {
+    // 固定清单读取失败时，保留内置回退数据，不能阻塞课堂演示。
+    hydrateBuiltInCarmenLesson();
+  }
+}
+
+async function loadCarmenDemo() {
+  clearTimers();
+  try {
+    const [audioResponse, planResponse] = await Promise.all([
+      fetch(fixedDemoAsset("gestureLesson", "audio", CARMEN_AUDIO), { cache: "no-store" }),
+      fetch(fixedDemoAsset("gestureLesson", "plan", CARMEN_GESTURE_PLAN), { cache: "no-store" })
+    ]);
+    if (!audioResponse.ok) throw new Error("没有读取到内置《卡门》音频。");
+    if (!planResponse.ok) throw new Error("没有读取到《卡门》课程手势方案。");
+    const [blob, curatedPlan] = await Promise.all([audioResponse.blob(), planResponse.json()]);
+    teacherAudioFile = new File([blob], `${CARMEN_TITLE}.mp3`, { type: blob.type || "audio/mpeg" });
+    teacherAudioPreviewUrl = CARMEN_AUDIO;
+    teacherPreviewMarkedGroup = -1;
+    state.teacherFileName = CARMEN_TITLE;
+    state.teacherPublished = false;
+    const analyzed = await analyzeTeacherSong();
+    if (analyzed) applyCuratedCarmenPlan(curatedPlan);
+  } catch (error) {
+    state.teacherStep = "input";
+    render();
+    showToast(error?.message || "没有成功载入《卡门》演示音频。" );
+  }
+}
+
+function chooseTeacherGesture(gestureId) {
+  if (!state.teacherEditing || !gestureLibrary.some(gesture => gesture.id === gestureId)) return;
+  const group = state.teacherAnalysis[state.teacherEditing.group];
+  group.gestureIds[state.teacherEditing.slot] = gestureId;
+  if (group.mode === "repeat" && group.gestureIds[0] !== group.gestureIds[1]) {
+    group.mode = "split";
+    group.reason = "老师调整后，两个小节分别使用不同手势。";
+  }
+  state.teacherEditing = null;
+  state.teacherPublished = false;
+  render();
+  showToast("手势已经替换。" );
+}
+
+function publishTeacherLesson() {
+  state.publishedTeacherAnalysis = state.teacherAnalysis.map(group => ({ ...group, gestureIds: [...group.gestureIds] }));
+  state.publishedLessonTitle = state.teacherFileName || CARMEN_TITLE;
+  state.publishedLessonAudioUrl = teacherAudioPreviewUrl || CARMEN_AUDIO;
+  state.publishedLessonMeter = state.teacherAnalysisMeta.meter;
+  state.publishedLessonStart = state.teacherAnalysis[0]?.start || 0;
+  state.publishedLessonEnd = state.teacherAnalysis[state.teacherAnalysis.length - 1]?.end || CARMEN_EXCERPT_SECONDS;
+  state.teacherPublished = true;
+  state.teacherStep = "published";
+  state.teacherEditing = null;
+  render();
+  showToast("已确认，课堂端会使用这份手势方案。" );
+}
+
+function resetTeacherSong() {
+  teacherAudioFile = null;
+  teacherAudioPreviewUrl = null;
+  teacherPreviewMarkedGroup = -1;
+  state.teacherStep = "input";
+  state.teacherFileName = "";
+  state.teacherPublished = false;
+  state.teacherEditing = null;
+  state.teacherAnalysis = defaultCarmenAnalysis.map(group => ({ ...group, gestureIds: [...group.gestureIds] }));
+  render();
+}
+
 function selectMood(key) {
+  stopMusicAudio();
   state.mood = key;
+  state.dogRhythmSource = "system";
   state.message = moods[key].postcardLine;
   const notes = moods[key].notes;
   notes.slice(0, 3).forEach((note, index) => later(() => tone(note, 0.25, 0.09, "triangle"), index * 130));
   render();
 }
 
+function selectGroove(key) {
+  stopMusicAudio();
+  if (state.groove && state.groove !== key && state.voice.status === "ready") {
+    releaseVoiceUrl();
+    state.voice = { status: "empty", audioUrl: null, blob: null };
+    state.sections = state.sections.map(section => section.filter(sticker => sticker !== "voice"));
+    showToast("律动速度变了，请重新录制我的声音贴纸。");
+  }
+  state.groove = key;
+  state.dogRhythmSource = "system";
+  render();
+  warmMusicPack();
+}
+
+function previewPack() {
+  if (state.packPreviewing) {
+    stopMusicAudio();
+    render();
+    return;
+  }
+  stopMusicAudio();
+  const customDog = state.dogRhythmSource === "custom" ? state.bodyRecordings[currentPackId()] : null;
+  if (customDog?.audioUrl) {
+    activeStemAudios = stemAnimals.map(animal => {
+      const audio = new Audio(animal === "dog" ? customDog.audioUrl : musicPath(`stems/${animal}.wav`));
+      audio.preload = "auto";
+      audio.volume = animal === "dog" ? 1 : .9;
+      audio.play().catch(() => showToast("音乐没有成功播放，请再试一次。"));
+      return audio;
+    });
+    state.packPreviewing = true;
+    render();
+    later(() => {
+      stopMusicAudio();
+      render();
+    }, grooveAudio[state.groove].duration * 1000 + 80);
+    return;
+  }
+  activePreviewAudio = new Audio(musicPath("preview/mix.wav"));
+  activePreviewAudio.preload = "auto";
+  state.packPreviewing = true;
+  activePreviewAudio.addEventListener("ended", () => {
+    activePreviewAudio = null;
+    state.packPreviewing = false;
+    render();
+  }, { once: true });
+  activePreviewAudio.addEventListener("error", () => {
+    activePreviewAudio = null;
+    state.packPreviewing = false;
+    render();
+    showToast("音乐资源暂时无法读取，请从启动入口打开 demo。");
+  }, { once: true });
+  activePreviewAudio.play().catch(() => {
+    stopMusicAudio();
+    state.packPreviewing = false;
+    render();
+    showToast("请再点一次试听，允许浏览器播放声音。");
+  });
+  render();
+}
+
+function releaseVoiceUrl() {
+  if (state.voice.audioUrl?.startsWith("blob:")) URL.revokeObjectURL(state.voice.audioUrl);
+}
+
+async function removeVoiceBeforeShare() {
+  releaseVoiceUrl();
+  state.voice = { status: "empty", audioUrl: null, blob: null };
+  state.sections = state.sections.map(section => section.filter(sticker => sticker !== "voice"));
+  if (state.saved) await persistCurrentWork();
+  state.modal = "share";
+  render();
+  showToast("已从作品中移除我的声音录音。");
+}
+
+async function deleteVoiceSticker() {
+  if (!window.confirm("删除后，原始录音和作品中的声音贴纸都会从当前设备移除。确认删除吗？")) return;
+  releaseVoiceUrl();
+  state.voice = { status: "empty", audioUrl: null, blob: null };
+  state.sections = state.sections.map(section => section.filter(sticker => sticker !== "voice"));
+  if (state.saved) await persistCurrentWork();
+  render();
+  showToast("我的声音贴纸和录音已删除。");
+}
+
+function deleteSavedWork() {
+  if (!window.confirm("确认删除保存在这台设备上的作品和录音吗？")) return;
+  try {
+    localStorage.removeItem("animal-music-postcard");
+  } catch {
+    showToast("当前浏览器无法删除本机保存记录。");
+    return;
+  }
+  releaseVoiceUrl();
+  state.voice = { status: "empty", audioUrl: null, blob: null };
+  state.sections = [["dog"], ["dog"], ["dog"], ["dog"]];
+  state.mood = null;
+  state.groove = null;
+  state.dogRhythmSource = "system";
+  state.saved = false;
+  state.title = "写给远方的星星";
+  state.message = "想把今天做的音乐送给你。";
+  render();
+  showToast("本机作品和录音已删除。");
+}
+
+function changeSolfegePhrase(direction) {
+  if (state.classPlaying) toggleClassPlayback();
+  const phraseCount = state.publishedSolfegeLesson?.phrases?.length || 1;
+  state.solfegePhraseIndex = Math.max(0, Math.min(phraseCount - 1, state.solfegePhraseIndex + direction));
+  render();
+}
+
 function handleAction(action, button, event) {
   const actions = {
     back: goBack,
-    library: () => showToast(state.saved ? "已经保存 1 张音乐明信片" : "完成作品后，明信片会出现在这里"),
+    library: () => setScreen("library"),
     "play-class-song": playClassSong,
-    "play-warm": playWarmup,
-    "new-pattern": newWarmPattern,
-    clap: () => registerClap(true),
-    "start-record": startRecording,
-    "enable-mic": enableMicrophone,
+    "previous-solfege-phrase": () => changeSolfegePhrase(-1),
+    "next-solfege-phrase": () => changeSolfegePhrase(1),
+    "play-full-solfege": () => state.classPlaying ? toggleClassPlayback() : playPublishedSolfegeLesson(true),
+    "open-solfege-recorder": () => {
+      const targets = solfegeRecordingTargets();
+      const firstMissing = targets.findIndex(target => !state.solfegeRecordings[target.key]);
+      if (firstMissing >= 0) state.solfegeRecordTargetIndex = firstMissing;
+      state.solfegeRecordingOpen = true;
+      render();
+    },
+    "close-solfege-recorder": () => { state.solfegeRecordingOpen = false; render(); },
+    "play-solfege-guide": playCurrentSolfegeGuide,
+    "record-solfege-target": recordCurrentSolfegeTarget,
+    "play-swan-melody": playSwanMelody,
+    "body-listen": () => playBodyLesson("listen"),
+    "body-slow": () => playBodyLesson("slow"),
+    "body-practice": () => playBodyLesson("practice"),
+    "record-body": recordBodyRhythm,
+    "save-body-recording": saveBodyRecording,
+    "previous-body-lesson": () => changeBodyLesson(-1),
+    "next-body-lesson": () => changeBodyLesson(1),
+    "open-teacher-analysis": () => { state.teacherMode = "analysis"; render(); },
+    "open-teacher-creation": () => { state.teacherMode = "creation"; render(); },
+    "open-teacher-solfege": () => { state.teacherMode = "solfege"; render(); },
+    "teacher-hub": () => { state.teacherMode = "hub"; render(); },
+    "analyze-score": analyzeScore,
+    "load-score-demo": loadScoreDemo,
+    "previous-score-measure": () => changeScoreReviewMeasure(-1),
+    "next-score-measure": () => changeScoreReviewMeasure(1),
+    "preview-score-measure": previewScoreMeasure,
+    "confirm-score-measure": confirmScoreMeasure,
+    "publish-score": publishScore,
+    "reset-score": resetScore,
+    "analyze-teacher-song": analyzeTeacherSong,
+    "load-carmen-demo": loadCarmenDemo,
+    "locate-teacher-group": () => locateTeacherGroup(Number(button.dataset.group)),
+    "publish-teacher-lesson": publishTeacherLesson,
+    "reset-teacher-song": resetTeacherSong,
+    "reopen-teacher-review": () => { state.teacherStep = "review"; state.teacherPublished = false; render(); },
+    "close-gesture-picker": () => { state.teacherEditing = null; render(); },
+    "preview-pack": previewPack,
+    "toggle-class-play": toggleClassPlayback,
+    "record-voice": recordVoice,
+    "use-voice": () => setScreen("arrange"),
     "play-section": () => playSection(Number(button.dataset.index)),
     "play-all": () => playAll(state.screen === "postcard"),
+    "stop-composition": stopComposition,
     "preview-version": () => playAll(state.version === "ai"),
-    "play-performance": () => playAll(true),
+    "play-performance": startPerformance,
     "begin-refine": beginRefine,
     save: savePostcard,
     share: () => { state.modal = "share"; render(); },
+    "delete-voice": deleteVoiceSticker,
+    "delete-work": deleteSavedWork,
+    "remove-voice-share": removeVoiceBeforeShare,
     "close-modal": () => { state.modal = null; render(); },
     "adult-confirm": confirmShare
   };
@@ -461,146 +3149,517 @@ function handleAction(action, button, event) {
 }
 
 function goBack() {
-  if (state.screen === "classroom") return setScreen("home");
-  if (state.screen === "classroomLesson") return setScreen("classroom");
+  if (state.screen === "teacher" && state.teacherMode !== "hub") {
+    state.teacherMode = "hub";
+    shouldAnimateScreen = true;
+    return render();
+  }
+  if (state.screen === "teacher") return setScreen("home");
+  if (state.screen === "feel") return setScreen("home");
+  if (["feel-melody", "feel-body", "feel-sing"].includes(state.screen)) return setScreen("feel");
+  if (state.screen === "library") return setScreen("feel");
   if (state.screen === "perform") return setScreen("refine");
-  const order = ["home", "mood", "arrange", "refine", "postcard"];
+  const order = ["home", "mood", "groove", "record", "arrange", "refine", "postcard"];
   const index = order.indexOf(state.screen);
   setScreen(order[Math.max(0, index - 1)]);
 }
 
-function playClassSong() {
-  clearTimers();
-  const notes = [261.6, 261.6, 392, 392, 440, 440, 392, 349.2];
-  notes.forEach((note, index) => later(() => {
-    tone(note, 0.36, 0.08, "triangle");
-    if (index % 2 === 0) drum(0.35);
-  }, index * 430));
-  later(() => showToast("旋律向上走时举高手，最后一拍停住"), notes.length * 430);
-}
-
-function playWarmup() {
-  clearTimers();
-  const interval = 60000 / (moods[state.mood]?.bpm || 80);
-  const dog = document.querySelector("#warm-dog");
-  dog?.classList.add("bounce");
-  for (let index = 0; index < CREATION_BEATS; index += 1) {
-    later(() => {
-      document.querySelectorAll("[data-beat]").forEach(dot => dot.classList.toggle("active", Number(dot.dataset.beat) === index));
-      if (state.warmPattern.includes(index)) drum(index % 4 === 0 ? 1 : 0.7);
-    }, index * interval);
+function solfegePlaybackNotes(lesson, fullLesson = false) {
+  const indexedNotes = lesson.notes.map((note, lessonIndex) => ({ ...note, lessonIndex }));
+  if (!fullLesson && lesson.phrases?.length) {
+    const phrase = lesson.phrases[state.solfegePhraseIndex] || lesson.phrases[0];
+    const phraseNotes = indexedNotes.filter(note => note.phraseId === phrase.id);
+    const firstBeat = phraseNotes.length ? Math.min(...phraseNotes.map(note => note.startBeat)) : 0;
+    return phraseNotes.map(note => ({ ...note, playBeat: note.startBeat - firstBeat }));
   }
-  later(() => { dog?.classList.remove("bounce"); showToast("轮到你啦！拍 4 拍，或者直接开始创作"); }, CREATION_BEATS * interval);
+  if (!lesson.repeat) return indexedNotes.map(note => ({ ...note, playBeat: note.startBeat }));
+  const repeatedMeasureNumbers = new Set(Array.from({ length: lesson.repeat.endMeasure - lesson.repeat.startMeasure + 1 }, (_, index) => lesson.repeat.startMeasure + index));
+  const repeatedNoteIndexes = new Set();
+  lesson.measures.forEach(measure => {
+    if (!repeatedMeasureNumbers.has(measure.number)) return;
+    measure.notes.forEach(note => repeatedNoteIndexes.add(lesson.notes.indexOf(note)));
+  });
+  const segment = indexedNotes.filter(note => repeatedNoteIndexes.has(note.lessonIndex));
+  if (!segment.length) return indexedNotes.map(note => ({ ...note, playBeat: note.startBeat }));
+  const segmentStart = Math.min(...segment.map(note => note.startBeat));
+  const segmentEnd = Math.max(...segment.map(note => note.startBeat + note.duration));
+  const segmentDuration = segmentEnd - segmentStart;
+  const before = indexedNotes.filter(note => note.startBeat < segmentStart).map(note => ({ ...note, playBeat: note.startBeat }));
+  const repeated = Array.from({ length: lesson.repeat.times }, (_, passIndex) => segment.map(note => ({ ...note, playBeat: segmentStart + (note.startBeat - segmentStart) + passIndex * segmentDuration, repeatPass: passIndex + 1 }))).flat();
+  const after = indexedNotes.filter(note => note.startBeat >= segmentEnd).map(note => ({ ...note, playBeat: note.startBeat + (lesson.repeat.times - 1) * segmentDuration }));
+  return [...before, ...repeated, ...after];
 }
 
-function newWarmPattern() {
-  const patterns = [[0, 1, 2, 3], [0, 2, 3], [0, 1, 3], [0, 2]];
-  const current = patterns.findIndex(pattern => pattern.join() === state.warmPattern.join());
-  state.warmPattern = patterns[(current + 1) % patterns.length];
+function playPublishedSolfegeLesson(fullLesson = false) {
+  clearTimers();
+  stopSolfegeNodes();
+  const lesson = state.publishedSolfegeLesson || DEFAULT_SOLFEGE_LESSON;
+  const playbackNotes = solfegePlaybackNotes(lesson, fullLesson);
+  const totalBeats = Math.max(...playbackNotes.map(note => note.playBeat + note.duration), 0);
+  const beatDuration = 60000 / Math.max(36, lesson.bpm || 72) / state.playbackRate;
+  const ctx = getAudioContext();
+  const startTime = ctx.currentTime + 0.08;
+  let pianoFallbacks = 0;
+  state.classPlaying = true;
+  state.solfegePlayingFull = fullLesson;
   render();
-  playWarmup();
+  playbackNotes.forEach(note => {
+    if (note.degree > 0) {
+      const durationSeconds = Math.max(.18, note.duration * beatDuration / 1000 * .98);
+      const when = startTime + note.playBeat * beatDuration / 1000;
+      const recording = state.solfegeRecordings[solfegeRecordingKey(note)];
+      if (state.solfegeSource === "builtinVoice") {
+        later(() => playSolfegeSample(note.solfege, note.frequency, durationSeconds, 0.18), note.playBeat * beatDuration);
+      } else if (state.solfegeSource === "voice" && recording?.audioBuffer) {
+        const source = ctx.createBufferSource();
+        const gain = ctx.createGain();
+        source.buffer = recording.audioBuffer;
+        gain.gain.setValueAtTime(0.0001, when);
+        gain.gain.exponentialRampToValueAtTime(0.7, when + 0.025);
+        gain.gain.setValueAtTime(0.7, when + Math.max(0.04, durationSeconds - 0.08));
+        gain.gain.exponentialRampToValueAtTime(0.0001, when + durationSeconds);
+        source.connect(gain).connect(ctx.destination);
+        source.start(when);
+        source.stop(when + Math.min(durationSeconds + 0.03, recording.audioBuffer.duration));
+        activeSolfegeNodes.push(source);
+      } else {
+        if (state.solfegeSource === "voice") pianoFallbacks += 1;
+        schedulePianoNote(note.frequency, when, durationSeconds);
+      }
+    }
+    later(() => {
+    document.querySelectorAll("[data-solfege-note]").forEach(element => element.classList.toggle("active", Number(element.dataset.solfegeNote) === note.lessonIndex));
+    }, note.playBeat * beatDuration);
+  });
+  if (pianoFallbacks > 0) later(() => showToast(`有 ${pianoFallbacks} 个音还没录好，已自动用钢琴补上。`), 120);
+  later(() => {
+    state.classPlaying = false;
+    state.solfegePlayingFull = false;
+    render();
+    showToast(state.solfegeSource === "voice" ? "播放完成。录好的音用你的声音，其余由钢琴补上。" : state.solfegeSource === "builtinVoice" ? "内置唱名示范播放完成。" : "钢琴示范播放完成。");
+  }, totalBeats * beatDuration + 120);
 }
 
-async function enableMicrophone() {
-  if (!navigator.mediaDevices?.getUserMedia) {
-    showToast("当前打开方式不能使用麦克风，可以继续轻拍屏幕");
+function playClassSong() {
+  if (state.feelMode === "sing") {
+    playPublishedSolfegeLesson();
     return;
   }
-  try {
-    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const ctx = getAudioContext();
-    const source = ctx.createMediaStreamSource(micStream);
-    analyser = ctx.createAnalyser();
-    analyser.fftSize = 512;
-    source.connect(analyser);
-    monitorMicrophone();
-    showToast("麦克风准备好了，现在可以直接拍手");
-  } catch {
-    showToast("没有获得麦克风权限，也可以轻拍中间按钮完成体验");
+  if (state.feelMode === "body") {
+    playBodyLesson("listen");
+    return;
   }
-}
-
-function monitorMicrophone() {
-  if (!analyser) return;
-  const data = new Uint8Array(analyser.fftSize);
-  const check = () => {
-    analyser.getByteTimeDomainData(data);
-    const peak = data.reduce((max, value) => Math.max(max, Math.abs(value - 128)), 0);
-    const now = performance.now();
-    if (state.isRecording && peak > 42 && now - lastMicHit > 180) {
-      lastMicHit = now;
-      registerClap(false);
-    }
-    micFrame = requestAnimationFrame(check);
-  };
-  cancelAnimationFrame(micFrame);
-  check();
-}
-
-function startRecording() {
   clearTimers();
-  state.recordHits = [];
-  state.isRecording = false;
+  state.classPlaying = true;
+  state.lessonMeasure = 0;
   render();
-  const status = document.querySelector("#record-status");
-  let countdown = 3;
-  status.textContent = `${countdown}…`;
-  const countdownTick = () => {
-    countdown -= 1;
-    if (countdown > 0) {
-      status.textContent = `${countdown}…`;
-      drum(0.35);
-      later(countdownTick, 650);
-    } else {
-      beginRecordWindow();
-    }
+  const beatDuration = 430 / state.playbackRate;
+  const notes = [261.6, 261.6, 392, 392, 440, 440, 392, 349.2];
+  const syllables = ["do", "do", "sol", "sol", "la", "la", "sol", "fa"];
+  const demoDog = document.querySelector(".dog-demo-state");
+  const actionStates = ["clap", "patThighs", "clap", "stop"];
+  const actionLabels = ["拍手", "拍腿", "拍手", "停住"];
+  const showDemoState = (stateName, alt) => {
+    if (!demoDog) return;
+    demoDog.src = dogStateAssets[stateName];
+    demoDog.dataset.dogState = stateName;
+    demoDog.alt = alt;
+    demoDog.classList.remove("dog-beat-pulse");
+    void demoDog.offsetWidth;
+    demoDog.classList.add("dog-beat-pulse");
   };
-  later(countdownTick, 650);
+  notes.forEach((note, index) => later(() => {
+    if (index === 4 && state.feelMode === "melody") {
+      state.lessonMeasure = 1;
+      render();
+    }
+    const actionIndex = index % actionStates.length;
+    document.querySelectorAll("[data-action-step]").forEach(card => card.classList.toggle("active", Number(card.dataset.actionStep) === actionIndex));
+    showDemoState(actionStates[actionIndex], `小狗正在领演：${actionLabels[actionIndex]}`);
+    if (state.feelMode === "sing") {
+      tone(note, 0.36, 0.055, "triangle");
+      if (state.solfegeMode !== "turn") playSolfegeSample(syllables[index], note, 0.34, state.solfegeMode === "together" ? 0.12 : 0.2);
+    } else {
+      tone(note, 0.36, 0.08, "triangle");
+    }
+    if (index % 2 === 0) drum(0.35);
+  }, index * beatDuration));
+  later(() => {
+    document.querySelectorAll("[data-action-step]").forEach(card => card.classList.remove("active"));
+    showDemoState("highFive", "小狗完成示范，邀请大家击掌");
+    state.classPlaying = false;
+    render();
+    showToast("旋律向上走时举高手，最后一拍停住");
+  }, notes.length * beatDuration);
+  later(() => showDemoState("ready", "小狗准备领演"), notes.length * beatDuration + 1400);
+}
+
+function toggleClassPlayback() {
+  if (state.classPlaying) {
+    clearTimers();
+    stopBodyPlayback();
+    stopSolfegeNodes();
+    activeSolfegeAudios.forEach(audio => audio.pause());
+    activeSolfegeAudios = [];
+    state.classPlaying = false;
+    state.solfegePlayingFull = false;
+    render();
+    return;
+  }
+  playClassSong();
 }
 
 function stopMicrophone() {
-  cancelAnimationFrame(micFrame);
   micStream?.getTracks().forEach(track => track.stop());
   micStream = null;
-  analyser = null;
 }
 
-function beginRecordWindow() {
-  state.isRecording = true;
-  recordStartedAt = performance.now();
-  render();
-  const interval = 60000 / (moods[state.mood]?.bpm || 80);
-  for (let beat = 0; beat < CREATION_BEATS; beat += 1) {
-    later(() => {
-      document.querySelectorAll("[data-record-beat]").forEach(dot => dot.classList.toggle("active", Number(dot.dataset.recordBeat) === beat));
-      tone(beat % 4 === 0 ? 880 : 660, 0.035, beat % 4 === 0 ? 0.08 : 0.04, "square");
-    }, beat * interval);
+function currentSolfegeRecordTarget() {
+  const targets = solfegeRecordingTargets();
+  return targets[Math.max(0, Math.min(targets.length - 1, state.solfegeRecordTargetIndex))];
+}
+
+function playCurrentSolfegeGuide() {
+  const target = currentSolfegeRecordTarget();
+  if (!target) return;
+  stopSolfegeNodes();
+  const ctx = getAudioContext();
+  schedulePianoNote(target.frequency, ctx.currentTime + 0.03, 1.15, 0.18);
+}
+
+function openSolfegeRecordingDb() {
+  if (typeof indexedDB === "undefined") return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("animal-music-solfege-voice", 1);
+    request.addEventListener("upgradeneeded", () => {
+      if (!request.result.objectStoreNames.contains("recordings")) request.result.createObjectStore("recordings", { keyPath: "key" });
+    });
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(request.error), { once: true });
+  });
+}
+
+async function decodeSolfegeBlob(blob) {
+  const data = await blob.arrayBuffer();
+  return getAudioContext().decodeAudioData(data.slice(0));
+}
+
+async function persistSolfegeRecording(record) {
+  const db = await openSolfegeRecordingDb();
+  if (!db) return;
+  await new Promise((resolve, reject) => {
+    const request = db.transaction("recordings", "readwrite").objectStore("recordings").put(record);
+    request.addEventListener("success", resolve, { once: true });
+    request.addEventListener("error", () => reject(request.error), { once: true });
+  });
+}
+
+async function hydrateSolfegeRecordings() {
+  try {
+    const db = await openSolfegeRecordingDb();
+    if (!db) return;
+    const recordings = await new Promise((resolve, reject) => {
+      const request = db.transaction("recordings", "readonly").objectStore("recordings").getAll();
+      request.addEventListener("success", () => resolve(request.result || []), { once: true });
+      request.addEventListener("error", () => reject(request.error), { once: true });
+    });
+    await Promise.all(recordings.map(async record => {
+      try {
+        state.solfegeRecordings[record.key] = { ...record, audioBuffer: await decodeSolfegeBlob(record.blob) };
+      } catch {}
+    }));
+  } catch {
+    showToast("唱名仍可录制和试听，但当前浏览器暂时不能长期保存录音。");
+  } finally {
+    state.solfegeRecordingsReady = true;
+    if (state.screen === "feel-sing") render();
   }
-  later(() => finishRecording(interval), CREATION_BEATS * interval);
 }
 
-function registerClap(fromPad) {
-  if (!state.isRecording) {
-    if (fromPad) showToast("先点“开始录制”，倒计时后再拍");
+async function recordCurrentSolfegeTarget() {
+  if (state.solfegeRecordStatus !== "idle") return;
+  const target = currentSolfegeRecordTarget();
+  if (!target) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    showToast("当前浏览器不支持录音，请先使用钢琴示范。");
     return;
   }
-  const interval = 60000 / (moods[state.mood]?.bpm || 80);
-  const beat = Math.min(CREATION_BEATS - 1, Math.max(0, Math.round((performance.now() - recordStartedAt) / interval)));
-  if (!state.recordHits.includes(beat)) state.recordHits.push(beat);
-  drum(0.9);
-  const pad = document.querySelector(".clap-pad");
-  pad?.classList.add("hit");
-  later(() => pad?.classList.remove("hit"), 100);
-  document.querySelector(`[data-record-beat="${beat}"]`)?.classList.add("hit");
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    state.solfegeRecordStatus = "countdown";
+    render();
+    playCurrentSolfegeGuide();
+    await new Promise(resolve => setTimeout(resolve, 1250));
+    const chunks = [];
+    mediaRecorder = new MediaRecorder(micStream);
+    mediaRecorder.addEventListener("dataavailable", event => { if (event.data.size) chunks.push(event.data); });
+    mediaRecorder.addEventListener("stop", async () => {
+      state.solfegeRecordStatus = "saving";
+      const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+      stopMicrophone();
+      try {
+        const record = { key: target.key, solfege: target.solfege, frequency: target.frequency, blob, mimeType: blob.type, createdAt: Date.now() };
+        const audioBuffer = await decodeSolfegeBlob(blob);
+        state.solfegeRecordings[target.key] = { ...record, audioBuffer };
+        try { await persistSolfegeRecording(record); } catch {}
+        const targets = solfegeRecordingTargets();
+        const nextMissing = targets.findIndex((item, index) => index > state.solfegeRecordTargetIndex && !state.solfegeRecordings[item.key]);
+        if (nextMissing >= 0) state.solfegeRecordTargetIndex = nextMissing;
+        showToast("已保存在这台设备上，可以继续录下一个音。");
+      } catch {
+        showToast("这次录音没有保存成功，请再试一次。");
+      } finally {
+        state.solfegeRecordStatus = "idle";
+        render();
+      }
+    }, { once: true });
+    mediaRecorder.start();
+    state.solfegeRecordStatus = "recording";
+    render();
+    later(() => mediaRecorder?.state === "recording" && mediaRecorder.stop(), 2500);
+  } catch {
+    stopMicrophone();
+    state.solfegeRecordStatus = "idle";
+    render();
+    showToast("没有获得麦克风权限，仍可继续使用钢琴示范。");
+  }
 }
 
-function finishRecording(interval) {
-  state.isRecording = false;
-  if (!state.recordHits.length) state.recordHits = [0, 1, 2, 3];
-  state.recordHits.sort((a, b) => a - b);
+function highlightBodyPattern(lesson, rate = 1) {
+  const pattern = bodyDisplayPattern(lesson);
+  const millisecondsPerBeat = 60000 / bodyLessonBpm(lesson) / rate;
+  for (let bar = 0; bar < RECORD_BARS; bar += 1) {
+    pattern.forEach((step, index) => later(() => {
+      document.querySelectorAll("[data-body-step]").forEach(element => element.classList.toggle("active", Number(element.dataset.bodyStep) === index));
+      const guide = document.querySelector("[data-body-guide]");
+      if (guide) {
+        guide.dataset.bodyGuide = step.action;
+        guide.setAttribute("aria-label", `小狗示范${BODY_ACTIONS[step.action].label}`);
+      }
+    }, (bar * BEATS_PER_BAR + step.beat) * millisecondsPerBeat));
+  }
+}
+
+function playBodyLesson(mode = "listen") {
+  clearTimers();
+  stopMusicAudio();
+  stopBodyPlayback();
+  const lesson = bodyLesson();
+  const rate = mode === "slow" ? .75 : 1;
+  const relativePath = mode === "practice" ? "preview/mix.wav" : "stems/dog.wav";
+  activeBodyAudio = new Audio(bodyMusicPath(lesson, relativePath));
+  activeBodyAudio.preload = "auto";
+  activeBodyAudio.playbackRate = rate;
+  activeBodyAudio.preservesPitch = true;
+  activeBodyAudio.volume = mode === "practice" ? .82 : 1;
+  state.bodyPlaybackMode = mode;
+  state.classPlaying = true;
   render();
-  showToast("我听见了！小狗来演一次你的节奏");
-  state.recordHits.forEach(beat => later(() => drum(0.9), beat * interval));
+  highlightBodyPattern(lesson, rate);
+  const duration = RECORD_BARS * BEATS_PER_BAR * 60000 / bodyLessonBpm(lesson) / rate;
+  activeBodyAudio.play().catch(() => {
+    stopBodyPlayback();
+    state.classPlaying = false;
+    render();
+    showToast("节奏没有成功播放，请再试一次。");
+  });
+  later(() => {
+    stopBodyPlayback();
+    state.classPlaying = false;
+    render();
+  }, duration + 80);
+}
+
+function releaseBodyDraft() {
+  if (state.bodyRecording.audioUrl?.startsWith("blob:")) URL.revokeObjectURL(state.bodyRecording.audioUrl);
+  state.bodyRecording = { status: "empty", audioUrl: null, blob: null };
+}
+
+function setBodyLessonIndex(index) {
+  if (["countdown", "recording"].includes(state.bodyRecording.status)) return;
+  clearTimers();
+  stopBodyPlayback();
+  releaseBodyDraft();
+  state.bodyLessonIndex = Math.max(0, Math.min(BODY_LESSONS.length - 1, index));
+  try { localStorage.setItem("animal-music-body-lesson", String(state.bodyLessonIndex)); } catch {}
+  render();
+}
+
+function changeBodyLesson(direction) {
+  setBodyLessonIndex(state.bodyLessonIndex + direction);
+}
+
+function selectBodyGroove(groove) {
+  const grooveIndex = BODY_GROOVE_ORDER.indexOf(groove);
+  if (grooveIndex < 0) return;
+  const moodIndex = Math.max(0, BODY_MOOD_ORDER.indexOf(bodyLesson().mood));
+  setBodyLessonIndex(grooveIndex * BODY_MOOD_ORDER.length + moodIndex);
+}
+
+async function recordBodyRhythm() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    showToast("当前浏览器不能录音，请在支持麦克风的设备上体验。");
+    return;
+  }
+  clearTimers();
+  stopBodyPlayback();
+  releaseBodyDraft();
+  state.bodyRecording.status = "countdown";
+  render();
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    const lesson = bodyLesson();
+    const interval = 60000 / bodyLessonBpm(lesson);
+    for (let beat = 0; beat < BEATS_PER_BAR; beat += 1) {
+      later(() => {
+        drum(beat === 0 ? .75 : .4);
+        showToast(`准备 ${beat + 1} / 4`);
+      }, beat * interval);
+    }
+    later(beginBodyCapture, BEATS_PER_BAR * interval);
+  } catch {
+    state.bodyRecording = { status: "empty", audioUrl: null, blob: null };
+    stopMicrophone();
+    render();
+    showToast("没有获得麦克风权限，需要允许后才能录下节奏。");
+  }
+}
+
+function beginBodyCapture() {
+  const lesson = bodyLesson();
+  state.bodyRecording.status = "recording";
+  render();
+  const chunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.addEventListener("dataavailable", event => { if (event.data.size) chunks.push(event.data); });
+  mediaRecorder.addEventListener("stop", () => {
+    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+    state.bodyRecording = { status: "ready", audioUrl: URL.createObjectURL(blob), blob };
+    stopMicrophone();
+    render();
+    showToast("录好了，先听一听；满意后再保存。");
+  }, { once: true });
+  mediaRecorder.start();
+  highlightBodyPattern(lesson);
+  later(() => mediaRecorder?.state === "recording" && mediaRecorder.stop(), RECORD_BARS * BEATS_PER_BAR * 60000 / bodyLessonBpm(lesson));
+}
+
+function openBodyRecordingDb() {
+  if (typeof indexedDB === "undefined") return Promise.resolve(null);
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open("animal-music-body-rhythms", 1);
+    request.addEventListener("upgradeneeded", () => {
+      if (!request.result.objectStoreNames.contains("recordings")) request.result.createObjectStore("recordings", { keyPath: "id" });
+    });
+    request.addEventListener("success", () => resolve(request.result), { once: true });
+    request.addEventListener("error", () => reject(request.error), { once: true });
+  });
+}
+
+async function hydrateBodyRecordings() {
+  try {
+    const savedIndex = Number(localStorage.getItem("animal-music-body-lesson"));
+    if (Number.isInteger(savedIndex)) state.bodyLessonIndex = Math.max(0, Math.min(15, savedIndex));
+  } catch {}
+  try {
+    const db = await openBodyRecordingDb();
+    if (!db) return;
+    const recordings = await new Promise((resolve, reject) => {
+      const request = db.transaction("recordings", "readonly").objectStore("recordings").getAll();
+      request.addEventListener("success", () => resolve(request.result || []), { once: true });
+      request.addEventListener("error", () => reject(request.error), { once: true });
+    });
+    recordings.forEach(recording => {
+      state.bodyRecordings[recording.id] = { ...recording, audioUrl: URL.createObjectURL(recording.blob) };
+    });
+  } catch {
+    showToast("节奏课程可以使用，但这台设备暂时不能长期保存录音。");
+  } finally {
+    state.bodyRecordingsReady = true;
+    if (state.screen === "feel-body" || state.screen === "groove") render();
+  }
+}
+
+async function saveBodyRecording() {
+  const lesson = bodyLesson();
+  const blob = state.bodyRecording.blob;
+  if (!blob) return;
+  const record = { id: lesson.id, mode: "table", blob, mimeType: blob.type, createdAt: Date.now() };
+  try {
+    const db = await openBodyRecordingDb();
+    if (db) await new Promise((resolve, reject) => {
+      const request = db.transaction("recordings", "readwrite").objectStore("recordings").put(record);
+      request.addEventListener("success", resolve, { once: true });
+      request.addEventListener("error", () => reject(request.error), { once: true });
+    });
+  } catch {
+    showToast("无法长期保存，但本次打开页面期间仍可使用这份节奏。");
+  }
+  const oldUrl = state.bodyRecordings[lesson.id]?.audioUrl;
+  if (oldUrl?.startsWith("blob:")) URL.revokeObjectURL(oldUrl);
+  state.bodyRecordings[lesson.id] = { ...record, audioUrl: URL.createObjectURL(blob) };
+  releaseBodyDraft();
+  render();
+  showToast(state.bodyLessonIndex === 15 ? "16 份节奏全部完成！" : "这一课已保存，可以进入下一课。");
+}
+
+function currentBpm() {
+  return grooveAudio[state.groove || "steady"].bpm;
+}
+
+function twoBarDuration() {
+  return RECORD_BARS * BEATS_PER_BAR * 60 / currentBpm();
+}
+
+async function recordVoice() {
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    showToast("当前浏览器不能录音；请在支持麦克风的设备上体验这一步。" );
+    return;
+  }
+  clearTimers();
+  releaseVoiceUrl();
+  state.voice = { status: "countdown", audioUrl: null, blob: null };
+  render();
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    let beat = 0;
+    const prepare = () => {
+      document.querySelectorAll("[data-record-beat]").forEach(dot => dot.classList.toggle("active", Number(dot.dataset.recordBeat) === beat));
+      drum(beat === 0 ? 0.7 : 0.35);
+      beat += 1;
+      if (beat < BEATS_PER_BAR) later(prepare, 60000 / currentBpm());
+      else later(beginVoiceCapture, 60000 / currentBpm());
+    };
+    prepare();
+  } catch {
+    state.voice = { status: "empty", audioUrl: null, blob: null };
+    render();
+    showToast("没有获得麦克风权限；需要主动允许后才能录下声音。" );
+  }
+}
+
+function beginVoiceCapture() {
+  state.voice.status = "recording";
+  render();
+  const chunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.addEventListener("dataavailable", event => { if (event.data.size) chunks.push(event.data); });
+  mediaRecorder.addEventListener("stop", () => {
+    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+    state.voice = { status: "ready", audioUrl: URL.createObjectURL(blob), blob };
+    stopMicrophone();
+    render();
+    showToast("声音贴纸做好了，先听一听吧。" );
+  }, { once: true });
+  mediaRecorder.start();
+  const interval = 60000 / currentBpm();
+  for (let beat = 0; beat < RECORD_BARS * BEATS_PER_BAR; beat += 1) {
+    later(() => {
+      document.querySelectorAll("[data-record-beat]").forEach(dot => dot.classList.toggle("active", Number(dot.dataset.recordBeat) === beat));
+      tone(beat % BEATS_PER_BAR === 0 ? 880 : 660, 0.035, 0.04, "square");
+    }, beat * interval);
+  }
+  later(() => mediaRecorder?.state === "recording" && mediaRecorder.stop(), RECORD_BARS * BEATS_PER_BAR * interval);
 }
 
 function bindArrangement() {
@@ -647,12 +3706,12 @@ function setStageMotion({ entering = [], leaving = [] } = {}) {
 }
 
 function addAnimal(animal, sectionIndex) {
-  if (state.sections[sectionIndex].includes(animal)) return showToast(`${animals[animal].name}已经在第 ${sectionIndex + 1} 段啦`);
+  if (state.sections[sectionIndex].includes(animal)) return showToast(`${stickerInfo(animal).name}已经在第 ${sectionIndex + 1} 段啦`);
   const isVisibleSection = !state.stageCompleted && sectionIndex === (state.playingSection ?? state.stageSection);
   state.sections[sectionIndex].push(animal);
   state.selectedAnimal = null;
   setStageMotion({ entering: isVisibleSection ? [animal] : [] });
-  showToast(`${animals[animal].name}加入第 ${sectionIndex + 1} 段啦`);
+  showToast(`${stickerInfo(animal).name}加入第 ${sectionIndex + 1} 段啦`);
   render();
 }
 
@@ -673,51 +3732,75 @@ function removeAnimal(animal, sectionIndex) {
   state.sections[sectionIndex] = state.sections[sectionIndex].filter(key => key !== animal);
   state.stageCompleted = false;
   setStageMotion({ leaving: isVisibleSection ? [animal] : [] });
-  showToast(`${animals[animal].name}在第 ${sectionIndex + 1} 段休息`);
+  showToast(`${stickerInfo(animal).name}在第 ${sectionIndex + 1} 段休息`);
   render();
 }
 
 function playSection(sectionIndex, embellished = false, onDone) {
-  const mood = moods[state.mood] || moods.miss;
   const section = state.sections[sectionIndex];
-  const interval = 60000 / mood.bpm;
+  const duration = grooveAudio[state.groove || "steady"].duration * 1000;
   state.stageCompleted = false;
   state.playingSection = sectionIndex;
   state.stageOpen = true;
   state.stageSection = sectionIndex;
   render();
-  for (let beat = 0; beat < 8; beat += 1) {
-    later(() => {
-      if (section.includes("dog") && state.recordHits.includes(beat % CREATION_BEATS)) drum(beat % 4 === 0 ? 0.9 : 0.6);
-      if (section.includes("cat") && beat % 2 === 0) tone(mood.notes[sectionIndex] / 2, 0.28, 0.08, "sine");
-      if (section.includes("lion") && (beat % 4 === 0 || beat % 4 === 3)) {
-        const trumpetDuration = beat % 4 === 0 ? 0.48 : 0.18;
-        tone(mood.notes[(sectionIndex + 2) % 4] * 2, trumpetDuration, 0.035, "sawtooth");
-      }
-      if (section.includes("bear") && section.includes("rabbit") && beat % 4 === 0) {
-        tone(mood.notes[sectionIndex], 0.48, 0.04, "triangle");
-        tone(mood.notes[(sectionIndex + 2) % 4], 0.48, 0.025, "triangle");
-      } else if (section.includes("bear") && beat % 2 === 0) {
-        const melodyNote = mood.notes[(beat / 2 + sectionIndex) % 4 | 0];
-        tone(melodyNote, 0.24, 0.07, "square");
-      }
-      const rabbitBeat = beat % 2 === 1;
-      if (section.includes("rabbit") && rabbitBeat) tone(mood.notes[(beat / 2 + sectionIndex) % 4 | 0] * 2, section.includes("bear") ? 0.36 : 0.18, 0.065, embellished ? "sine" : "triangle");
-      if (embellished && beat === 7) tone(mood.notes[(sectionIndex + 1) % 4] * 2, 0.35, 0.05, "sine");
-    }, beat * interval);
-  }
-  later(() => { state.playingSection = null; render(); onDone?.(); }, 8 * interval);
+  stopMusicAudio();
+  activeStemAudios = stemAnimals
+    .filter(animal => section.includes(animal))
+    .map(animal => {
+      const customDog = animal === "dog" && state.dogRhythmSource === "custom" ? state.bodyRecordings[currentPackId()] : null;
+      const audio = new Audio(customDog?.audioUrl || musicPath(`stems/${animal}.wav`));
+      audio.preload = "auto";
+      audio.volume = embellished
+        ? ({ dog: 0.92, bear: 1, cat: 0.88, lion: 0.94 }[animal] || 1)
+        : 0.9;
+      audio.play().catch(() => showToast("音乐没有成功播放，请再试一次。"));
+      return audio;
+    });
+  if (section.includes("voice") && state.voice.audioUrl) later(() => {
+    activeVoiceAudio = new Audio(state.voice.audioUrl);
+    activeVoiceAudio.volume = embellished ? 0.88 : 1;
+    activeVoiceAudio.play().catch(() => {});
+  }, 0);
+  later(() => {
+    activeStemAudios = [];
+    activeVoiceAudio = null;
+    if (onDone) {
+      onDone();
+      return;
+    }
+    state.playingSection = null;
+    render();
+  }, duration);
+}
+
+function stopComposition() {
+  clearTimers();
+  stopMusicAudio();
+  activeVoiceAudio?.pause();
+  activeVoiceAudio = null;
+  state.playingSection = null;
+  state.performancePreparing = false;
+  state.stageCompleted = false;
+  render();
+  showToast("已暂停，可以继续修改或重新播放。");
 }
 
 function playAll(embellished = false) {
   clearTimers();
   state.stageOpen = true;
   state.stageCompleted = false;
-  const mood = moods[state.mood] || moods.miss;
-  const sectionDuration = 8 * (60000 / mood.bpm);
   let index = 0;
+  let round = 0;
   const next = () => {
     if (index >= 4) {
+      if (round === 0) {
+        round = 1;
+        index = 0;
+        showToast("第一遍听完了，第二遍可以一起跟着演。" );
+        next();
+        return;
+      }
       state.playingSection = null;
       state.stageCompleted = true;
       render();
@@ -736,21 +3819,62 @@ function beginRefine() {
   later(() => setScreen("refine"), 1800);
 }
 
-function savePostcard() {
-  state.saved = true;
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => resolve(reader.result), { once: true });
+    reader.addEventListener("error", () => reject(reader.error), { once: true });
+    reader.readAsDataURL(blob);
+  });
+}
+
+function startPerformance() {
+  clearTimers();
+  state.performancePreparing = true;
+  render();
+  const interval = 60000 / currentBpm();
+  for (let beat = 0; beat < BEATS_PER_BAR; beat += 1) {
+    later(() => {
+      drum(beat === 0 ? 0.7 : 0.35);
+      showToast(`准备拍 ${beat + 1} / ${BEATS_PER_BAR}`);
+    }, beat * interval);
+  }
+  later(() => {
+    state.performancePreparing = false;
+    toast.classList.remove("show");
+    render();
+    playAll(true);
+  }, BEATS_PER_BAR * interval);
+}
+
+async function persistCurrentWork() {
+  const voiceDataUrl = state.voice.status !== "ready"
+    ? null
+    : state.voice.audioUrl?.startsWith("data:")
+      ? state.voice.audioUrl
+      : state.voice.blob
+        ? await blobToDataUrl(state.voice.blob)
+        : null;
+  localStorage.setItem("animal-music-postcard", JSON.stringify({
+    mood: state.mood,
+    title: state.title,
+    message: state.message,
+    sections: state.sections,
+    groove: state.groove,
+    dogRhythmSource: state.dogRhythmSource,
+    voiceDataUrl
+  }));
+}
+
+async function savePostcard() {
   try {
-    localStorage.setItem("animal-music-postcard", JSON.stringify({
-      mood: state.mood,
-      title: state.title,
-      message: state.message,
-      sections: state.sections,
-      recordHits: state.recordHits
-    }));
+    await persistCurrentWork();
   } catch {
     showToast("当前浏览器不允许本地保存，但作品仍保留在本次体验中");
     render();
     return;
   }
+  state.saved = true;
   render();
   showToast("已经保存在这台设备上了");
 }
@@ -762,3 +3886,6 @@ function confirmShare() {
 }
 
 render();
+hydrateBodyRecordings();
+hydrateSolfegeRecordings();
+hydrateFixedDemoPack();
