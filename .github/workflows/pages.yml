@@ -1,4 +1,5 @@
 name: Publish prototype to GitHub Pages
+# Static demo deployment from the prototype directory.
 
 on:
   push:
