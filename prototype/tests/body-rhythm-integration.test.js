@@ -7,17 +7,47 @@ const musicRoot = path.join(prototypeRoot, "assets", "music");
 const moods = ["happy", "calm", "brave", "longing"];
 const grooves = ["steady", "bounce", "sway", "forward"];
 const expectedPatterns = {
-  steady: [[0, "dong"], [.5, "ci"], [1, "da"], [1.5, "ci"], [2, "dong"], [2.5, "ci"], [3, "da"], [3.5, "ci"]],
-  bounce: [[0, "dong"], [.5, "ci"], [1, "da"], [1.5, "ci"], [2, "dong"], [2.5, "ci"], [3, "da"], [3.5, "ci"]],
+  steady: [[0, "dong"], [1, "da"], [2, "dong"], [3, "da"]],
+  bounce: [[0, "dong"], [.5, "ci"], [1, "dong"], [1.5, "ci"], [2, "dong"], [2.5, "ci"], [3, "dong"], [3.5, "ci"]],
   sway: [[0, "dong"], [.667, "ci"], [1, "da"], [1.667, "ci"], [2, "dong"], [2.667, "ci"], [3, "da"], [3.667, "ci"]],
   forward: [[0, "dong"], [.5, "ci"], [1, "da"], [1.5, "dong"], [2, "dong"], [2.5, "ci"], [3, "da"], [3.5, "dong"]]
 };
 
-function actionAt(events) {
-  const instruments = new Set(events.map(event => event.instrument));
-  if (instruments.has("snare")) return "da";
+function wavWindowRms(filePath, seconds) {
+  const data = fs.readFileSync(filePath);
+  const channels = data.readUInt16LE(22);
+  const sampleRate = data.readUInt32LE(24);
+  let offset = 12;
+  let pcmStart = -1;
+  let pcmBytes = 0;
+  while (offset + 8 <= data.length) {
+    const id = data.toString("ascii", offset, offset + 4);
+    const size = data.readUInt32LE(offset + 4);
+    if (id === "data") { pcmStart = offset + 8; pcmBytes = size; break; }
+    offset += 8 + size + (size % 2);
+  }
+  if (pcmStart < 0) throw new Error(`WAV 缺少 data 区块：${filePath}`);
+  const firstFrame = Math.round((seconds + 0.005) * sampleRate);
+  const frameCount = Math.round(0.115 * sampleRate);
+  let sum = 0;
+  let count = 0;
+  for (let frame = firstFrame; frame < firstFrame + frameCount; frame += 1) {
+    const frameOffset = pcmStart + frame * channels * 2;
+    if (frameOffset + channels * 2 > pcmStart + pcmBytes) break;
+    let sample = 0;
+    for (let channel = 0; channel < channels; channel += 1) sample += data.readInt16LE(frameOffset + channel * 2) / 32768;
+    sample /= channels;
+    sum += sample * sample;
+    count += 1;
+  }
+  return Math.sqrt(sum / Math.max(1, count));
+}
+
+function actionAt(events, groove) {
+  const instruments = new Set(events.filter(event => groove !== "steady" || event.instrument !== "hihat").map(event => event.instrument));
   if (instruments.has("kick")) return "dong";
-  return "ci";
+  if (instruments.has("snare")) return "da";
+  return instruments.has("hihat") ? "ci" : null;
 }
 
 for (const groove of grooves) {
@@ -30,7 +60,7 @@ for (const groove of grooves) {
       events.push(event);
       firstBar.set(event.beat, events);
     });
-    const actual = [...firstBar.entries()].sort((a, b) => a[0] - b[0]).map(([beat, events]) => [beat, actionAt(events)]);
+    const actual = [...firstBar.entries()].sort((a, b) => a[0] - b[0]).map(([beat, events]) => [beat, actionAt(events, groove)]).filter(([, action]) => action);
     if (JSON.stringify(actual) !== JSON.stringify(expectedPatterns[groove])) {
       throw new Error(`${mood}_${groove} 的动作教学没有对应 score.json 节奏`);
     }
@@ -85,11 +115,25 @@ for (const requiredText of ["桌面节奏课 · 1 / 16", "敲桌面", "拍手", 
 }
 if (!appElement.innerHTML.includes("assets/stickers/body-rhythm/dog-table-actions.png")) throw new Error("最终小狗动作图没有接入课程页面");
 if (!appElement.innerHTML.includes('data-body-guide="dong"')) throw new Error("课程没有以单动作图片开始");
-if ((appElement.innerHTML.match(/data-body-step=/g) || []).length !== 8) throw new Error("身体律动页面没有只显示一小节动作");
+if ((appElement.innerHTML.match(/data-body-step=/g) || []).length !== 4) throw new Error("稳稳走没有只显示一小节四个主节拍动作");
 if (context.__bodyActions.ci.label !== "敲桌沿") throw new Error("桌沿动作映射丢失");
 for (const grooveName of ["稳稳走", "蹦蹦跳", "摇一摇", "向前冲"]) {
   if (!appElement.innerHTML.includes(grooveName)) throw new Error(`身体节奏页缺少律动切换按钮：${grooveName}`);
 }
+
+for (const mood of moods) {
+  const dogPath = path.join(musicRoot, `${mood}_steady`, "v01", "stems", "dog.wav");
+  const secondsPerBeat = 60 / 88;
+  const mainHits = [0, 1, 2, 3].map(beat => wavWindowRms(dogPath, beat * secondsPerBeat));
+  const offbeats = [0.5, 1.5, 2.5, 3.5].map(beat => wavWindowRms(dogPath, beat * secondsPerBeat));
+  if (Math.min(...mainHits) < 0.005 || Math.max(...offbeats) > 0.002) {
+    throw new Error(`${mood}_steady 的小狗音频不符合四个整数拍主节奏`);
+  }
+}
+if (!appElement.innerHTML.includes("动 · 打 · 动 · 打")) throw new Error("稳稳走没有显示动打动打主节奏型");
+context.__selectBodyGroove("bounce");
+if (context.__state.bodyLessonIndex !== 4 || !appElement.innerHTML.includes("蹦蹦跳 · 开心")) throw new Error("切换蹦蹦跳时课程索引错误");
+if (!appElement.innerHTML.includes("动 · 次 · 动 · 次 · 动 · 次 · 动 · 次")) throw new Error("蹦蹦跳没有显示每拍弹跳重拍节奏型");
 context.__state.bodyLessonIndex = 2;
 context.__selectBodyGroove("forward");
 if (context.__state.bodyLessonIndex !== 14 || !appElement.innerHTML.includes("向前冲 · 勇敢")) throw new Error("切换律动时没有保留当前心情");
@@ -99,8 +143,8 @@ context.__state.mood = "happy";
 context.__state.groove = "bounce";
 context.__state.dogRhythmSource = "custom";
 context.__state.bodyRecordings.happy_bounce = { audioUrl: "blob:my-dog-rhythm" };
-context.__state.voice = { status: "ready", audioUrl: "blob:child-recording", blob: {} };
-context.__state.sections = [["dog", "bear", "cat", "lion", "voice"], [], [], []];
+context.__state.voiceStickers = [{ id: "clip-1", name: "我的声音 1", audioUrl: "blob:child-recording", blob: {}, bpm: 96 }];
+context.__state.sections = [["dog", "bear", "cat", "lion", "voice:clip-1"], [], [], []];
 played.length = 0;
 context.__playSection(0);
 

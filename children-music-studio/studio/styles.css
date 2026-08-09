@@ -21,7 +21,7 @@ button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 .is-hidden { display: none !important; }
 
-/* 儿童音乐设计台：沿用动物音乐设计台的视觉语言，入口改为自由描述。 */
+/* 儿童音乐设计台：沿用动物乐队设计台的视觉语言，入口改为自由描述。 */
 .hero-copy { max-width: 980px; }
 .progress-card { position: relative; }
 .progress-card small { display: block; color: var(--muted); margin-top: 8px; }

@@ -33,12 +33,16 @@ const source = `${fs.readFileSync(appPath, "utf8")}
 globalThis.__dongfanghong = DONGFANGHONG_SCORE;
 globalThis.__state = state;
 globalThis.__renderFeelSing = renderFeelSing;
+globalThis.__renderTeacherHub = renderTeacherHub;
 globalThis.__renderTeacherScore = renderTeacherScore;
+globalThis.__renderTeacherVoiceBank = renderTeacherVoiceBank;
 globalThis.__loadScoreDemo = loadScoreDemo;
 globalThis.__scoreReviewGroups = scoreReviewGroups;
 globalThis.__solfegePlaybackNotes = solfegePlaybackNotes;
 globalThis.__solfegeSourceFrequencies = SOLFEGE_SOURCE_FREQUENCIES;
-globalThis.__solfegeRecordingTargets = solfegeRecordingTargets;`;
+globalThis.__solfegeRecordingTargets = solfegeRecordingTargets;
+globalThis.__teacherVoiceSampleForNote = teacherVoiceSampleForNote;
+globalThis.__findSolfegeVoiceRange = findSolfegeVoiceRange;`;
 vm.runInContext(source, context);
 
 const score = context.__dongfanghong;
@@ -66,6 +70,10 @@ const taiYangSheng = score.measures.find(measure => measure.number === 3)?.notes
 if (!taiYangSheng || taiYangSheng.map(note => note.duration).join(",") !== "1,0.5,0.5") {
   throw new Error("“太阳升”的 1 1 6 没有按一拍、半拍、半拍播放");
 }
+const mouXing = score.measures.find(measure => measure.number === 11)?.notes;
+if (!mouXing || mouXing[0]?.degree !== 5 || mouXing[0]?.octave !== -1 || mouXing[1]?.degree !== 5 || mouXing[1]?.octave !== 0) {
+  throw new Error("第 11 小节“谋幸”没有保存为低音 5、中央音 5");
+}
 const expectedMeasureRhythms = new Map([
   [1, "1,0.5,0.5"], [3, "1,0.5,0.5"], [7, "1,0.5,0.5"], [10, "1,0.5,0.5"], [13, "1,0.5,0.5"]
 ]);
@@ -86,20 +94,67 @@ for (const [syllable, target] of Object.entries(fMajorTargets)) {
 
 const fullPlayback = context.__solfegePlaybackNotes(score, true);
 if (fullPlayback.length !== score.notes.length) throw new Error("完整旋律的音符数量错误");
+context.__state.solfegePhraseIndex = 2;
+const remainingPlayback = context.__solfegePlaybackNotes(score, true);
+if (!remainingPlayback.length || remainingPlayback.length >= fullPlayback.length || remainingPlayback[0].phraseId !== score.phrases[2].id || remainingPlayback[0].playBeat !== 0) {
+  throw new Error("听全曲没有从当前页开始并重新对齐播放时间");
+}
+context.__state.solfegePhraseIndex = 0;
 
 context.__state.screen = "feel-sing";
 const lessonHtml = context.__renderFeelSing();
-for (const text of ["《东方红》", "第 1 页", "东方红，太阳升", "本页四小节简谱", "钢琴示范", "我的声音", "录制我的唱名"]) {
+for (const text of ["《东方红》", "第 1 页", "东方红，太阳升", "本页四小节简谱", "唱唱名", "听小节", "听全曲", "播放速度", `${score.bpm} BPM`, "听钢琴演奏唱名旋律"]) {
   if (!lessonHtml.includes(text)) throw new Error(`唱名课堂缺少：${text}`);
 }
+context.__state.solfegeActiveNoteIndex = score.notes.indexOf(score.phrases.length && score.notes.find(note => note.phraseId === score.phrases[0].id));
+const activeLessonHtml = context.__renderFeelSing();
+if (!/class="jianpu-note [^"]* active"/.test(activeLessonHtml)) throw new Error("当前播放音符在重新渲染后没有保持红底选中");
+context.__state.solfegeActiveNoteIndex = null;
+for (const hiddenText of ["老师唱名", "录制我的唱名", "选择演唱声音", "选择示范声音", "Diff 人声", "演唱歌词"]) {
+  if (lessonHtml.includes(hiddenText)) throw new Error(`唱名课堂仍显示已隐藏功能：${hiddenText}`);
+}
+context.__state.publishedSolfegeLesson = JSON.parse(JSON.stringify(score));
+const restoredLessonHtml = context.__renderFeelSing();
+if (restoredLessonHtml.includes('data-solfege-note="-1"')) throw new Error("本地恢复后的简谱音符仍然无法匹配播放索引");
+if (!restoredLessonHtml.includes('role="button"') || !restoredLessonHtml.includes("试听sol")) throw new Error("简谱音符没有提供点击试听交互");
+context.__state.publishedSolfegeLesson = score;
+const teacherHubHtml = context.__renderTeacherHub();
+if (teacherHubHtml.includes("标准唱名音色库") || teacherHubHtml.includes("open-teacher-voicebank")) throw new Error("备课首页仍显示唱名录制入口");
+if (!teacherHubHtml.includes("乐谱唱名制作")) throw new Error("备课首页误删了唱唱名课程模块");
 if ((lessonHtml.match(/class="jianpu-measure"/g) || []).length !== 4) throw new Error("页面没有恰好显示 4 个完整小节");
-const voiceTargets = context.__solfegeRecordingTargets(score);
-if (voiceTargets.length !== 8) throw new Error(`《东方红》应只需录制 8 个实际音高，当前为 ${voiceTargets.length}`);
+const voiceTargets = context.__solfegeRecordingTargets();
+if (voiceTargets.length !== 21) throw new Error(`标准唱名音色库应有 21 个音，当前为 ${voiceTargets.length}`);
+if (new Set(voiceTargets.map(target => target.key)).size !== 21) throw new Error("标准唱名音色库存在重复音");
+if (voiceTargets[0].key !== "do-48" || voiceTargets.at(-1).key !== "si-83") throw new Error("标准唱名音色库没有覆盖低、中、高三个八度");
+for (const target of voiceTargets.filter(target => target.solfege === "do")) {
+  context.__state.solfegeRecordings[target.key] = { frequency: target.frequency, audioBuffer: {} };
+}
+const fMajorDoSample = context.__teacherVoiceSampleForNote({ solfege: "do", frequency: 349.228 });
+if (fMajorDoSample?.target.key !== "do-60") throw new Error("F 调 do 没有选择最近的中八度 do 录音");
+if (Math.abs(fMajorDoSample.playbackRate - 349.228 / 261.625565) > 0.001) throw new Error("录音没有按简谱实际音高进行轻微调整");
+context.__state.solfegeRecordings = {};
 context.__state.solfegeRecordingOpen = true;
-const recorderHtml = context.__renderFeelSing();
-for (const text of ["已完成 0 / 8", "标准音", "开始录音", "只保存在当前浏览器"]) {
+const recorderHtml = context.__renderTeacherVoiceBank();
+for (const text of ["标准唱名音色库", "独立资源", "低八度", "中八度", "高八度", "已完成 0 / 21", "标准音", "开始录音", "至少保持 0.8 秒", "自动剪掉前后空白", "不会绑定某一首简谱"]) {
   if (!recorderHtml.includes(text)) throw new Error(`录音流程缺少：${text}`);
 }
+const syntheticSamples = new Float32Array(2000);
+for (let index = 500; index < 1600; index += 1) syntheticSamples[index] = Math.sin(index * 0.17) * 0.3;
+const detectedRange = context.__findSolfegeVoiceRange({
+  sampleRate: 1000,
+  length: syntheticSamples.length,
+  numberOfChannels: 1,
+  getChannelData: () => syntheticSamples
+});
+if (!detectedRange || detectedRange.validDuration < 1 || detectedRange.startFrame >= 500 || detectedRange.endFrame <= 1600) {
+  throw new Error("自动剪切没有正确识别有效发音和保留自然边缘");
+}
+context.__state.solfegeRecordings[voiceTargets[0].key] = { validDuration: 1.05, audioBuffer: { duration: 1.17 } };
+const savedRecorderHtml = context.__renderTeacherVoiceBank();
+for (const text of ["试听录音", "有效发音 1.05 秒", "已自动剪切"]) {
+  if (!savedRecorderHtml.includes(text)) throw new Error(`已保存录音缺少：${text}`);
+}
+context.__state.solfegeRecordings = {};
 for (const unwanted of ["听小兔唱", "一起唱", "轮到我唱", "这一句听什么", "完整演唱"]) {
   if (lessonHtml.includes(unwanted)) throw new Error(`简化页面仍显示多余内容：${unwanted}`);
 }
