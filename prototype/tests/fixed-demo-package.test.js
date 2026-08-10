@@ -16,6 +16,8 @@ assertFile(manifest.gestureLesson.audio.replace(/^assets[\\/]/, "assets/"), "卡
 assertFile(manifest.gestureLesson.plan.replace(/^assets[\\/]/, "assets/"), "卡门手势数据");
 assertFile(manifest.solfegeLesson.score.replace(/^assets[\\/]/, "assets/"), "东方红乐谱数据");
 assertFile(`${manifest.solfegeLesson.voiceRoot.replace(/^assets[\\/]/, "assets/")}/do.wav`, "唱名录音");
+if (manifest.solfegeLesson.voiceRoot !== "assets/solfege/voice-katy") throw new Error("唱名示范没有切回原始 Katy 音色");
+for (const syllable of ["sol", "la", "si"]) assertFile(`assets/solfege/voice-katy-natural-low-f/${syllable}.wav`, `自然低音 ${syllable}`);
 
 const score = JSON.parse(fs.readFileSync(path.join(prototypeRoot, "assets", "demo", "dongfanghong.json"), "utf8"));
 if (score.source !== "human-curated" || score.measures.length !== 16) throw new Error("东方红固定演示数据不是16小节人工校对版本");

@@ -40,6 +40,21 @@ GENERATED_TASKS_DIR = AUDIO_DIR / "studio-data" / "generated-tasks"
 DESIGN_PROJECTS_DIR = AUDIO_DIR / "studio-data" / "design-projects"
 MAX_BODY_BYTES = 2 * 1024 * 1024
 AUTO_REPAIR_LIMIT = 2
+VOICE_PITCH_RE = re.compile(r"^([A-G])([#b]?)(-?\d+)$")
+VOICE_SEMITONES = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
+VOICE_CHORD_TONES = {
+    "C": {"C", "E", "G"},
+    "Dm": {"D", "F", "A"},
+    "Em": {"E", "G", "B"},
+    "F": {"F", "A", "C"},
+    "G": {"G", "B", "D"},
+    "Am": {"A", "C", "E"},
+}
+LION_PITCH_CANDIDATES = tuple(
+    f"{letter}{octave}"
+    for octave, letters in ((3, "AB"), (4, "CDEFGAB"), (5, "CDEFG"))
+    for letter in letters
+)
 ANIMALS = ("bear", "cat", "dog", "lion")
 ANIMAL_ROLES = {
     "bear": "keyboard_and_melody",
@@ -827,6 +842,108 @@ def save_record(record_dir: Path, record: dict) -> None:
     (record_dir / "record.json").write_text(json.dumps(record, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
+def voice_midi_number(pitch: object) -> int | None:
+    if not isinstance(pitch, str):
+        return None
+    match = VOICE_PITCH_RE.fullmatch(pitch)
+    if not match:
+        return None
+    letter, accidental, octave_text = match.groups()
+    return 12 * (int(octave_text) + 1) + VOICE_SEMITONES[letter] + {"": 0, "#": 1, "b": -1}[accidental]
+
+
+def voice_note_data(note: object) -> tuple[float, float, str, int] | None:
+    if not isinstance(note, dict):
+        return None
+    try:
+        beat = float(note["beat"])
+        duration = float(note["duration"])
+        pitch = str(note["pitch"])
+    except (KeyError, TypeError, ValueError):
+        return None
+    match = VOICE_PITCH_RE.fullmatch(pitch)
+    midi = voice_midi_number(pitch)
+    if not match or midi is None:
+        return None
+    return beat, duration, match.group(1), midi
+
+
+def repair_lion_melody_friction(skeleton: dict) -> list[str]:
+    """Deterministically move only conflicting sax notes to safe nearby pitches."""
+    melody = skeleton.get("melody")
+    lion_notes = skeleton.get("lionNotes")
+    chords = skeleton.get("chords")
+    if not isinstance(melody, list) or not isinstance(lion_notes, list):
+        return []
+
+    melody_data = [parsed for note in melody if (parsed := voice_note_data(note)) is not None]
+    chord_timeline: list[tuple[float, str]] = []
+    if isinstance(chords, list):
+        for chord in chords:
+            try:
+                beat = float(chord["beat"])
+                symbol = str(chord["symbol"])
+            except (KeyError, TypeError, ValueError):
+                continue
+            if symbol in VOICE_CHORD_TONES:
+                chord_timeline.append((beat, symbol))
+    chord_timeline.sort(key=lambda item: item[0])
+
+    candidate_data = [
+        (pitch, VOICE_PITCH_RE.fullmatch(pitch).group(1), voice_midi_number(pitch))
+        for pitch in LION_PITCH_CANDIDATES
+    ]
+    changes: list[str] = []
+
+    for lion_note in lion_notes:
+        parsed_lion = voice_note_data(lion_note)
+        if parsed_lion is None:
+            continue
+        lion_beat, lion_duration, _, lion_midi = parsed_lion
+        lion_end = lion_beat + lion_duration
+        overlaps = [
+            melody_note
+            for melody_note in melody_data
+            if min(melody_note[0] + melody_note[1], lion_end) - max(melody_note[0], lion_beat) >= 0.48
+        ]
+        if not any(0 < abs(melody_note[3] - lion_midi) <= 2 for melody_note in overlaps):
+            continue
+
+        required_chords: list[str] = []
+        active_at_start = None
+        for chord_beat, symbol in chord_timeline:
+            if chord_beat <= lion_beat + 0.02:
+                active_at_start = symbol
+            elif chord_beat < lion_end - 0.02:
+                required_chords.append(symbol)
+            else:
+                break
+        if lion_duration >= 1.48 and active_at_start:
+            required_chords.append(active_at_start)
+
+        safe_candidates: list[tuple[tuple[int, int, int], str]] = []
+        for pitch, letter, midi in candidate_data:
+            if midi is None or any(letter not in VOICE_CHORD_TONES[chord] for chord in required_chords):
+                continue
+            intervals = [abs(melody_note[3] - midi) for melody_note in overlaps]
+            if any(0 < interval <= 2 for interval in intervals):
+                continue
+            # Prefer a distinct consonant line, then the smallest possible sax move.
+            unison_count = sum(interval == 0 for interval in intervals)
+            consonance_penalty = sum(interval % 12 not in {0, 3, 4, 5, 7, 8, 9} for interval in intervals)
+            safe_candidates.append(((unison_count, consonance_penalty, abs(midi - lion_midi)), pitch))
+
+        if not safe_candidates:
+            continue
+        replacement = min(safe_candidates, key=lambda item: item[0])[1]
+        previous = str(lion_note.get("pitch", ""))
+        if replacement != previous:
+            lion_note["pitch"] = replacement
+            changes.append(f"萨克斯 {previous}→{replacement}（第 {lion_beat:g} 拍）")
+
+    return changes
+
+
 def auto_repair_skeleton(
     *,
     task_path: Path,
@@ -890,6 +1007,12 @@ def auto_repair_skeleton(
             )
         except ValueError as error:
             raise ValueError(f"自动修改第 {attempt} 次时调用模型失败：{error}") from error
+
+        candidate = read_json(candidate_path)
+        deterministic_changes = repair_lion_melody_friction(candidate) if isinstance(candidate, dict) else []
+        if deterministic_changes:
+            candidate_path.write_text(json.dumps(candidate, ensure_ascii=False, indent=2), encoding="utf-8")
+            (attempt_dir / "deterministic-repair.txt").write_text("\n".join(deterministic_changes) + "\n", encoding="utf-8")
 
         try:
             run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path, "--skeleton", candidate_path)
@@ -966,6 +1089,28 @@ def generate_record_json(record_id: str) -> dict:
     task_path = task_path_for_kit(record["kitId"])
     output_path = record_dir / "generated.json"
     raw_path = record_dir / "qwen.raw.json"
+
+    # A failed result may only need the deterministic sax/melody safety pass.
+    # Reuse it before making another remote, potentially billable model call.
+    if record.get("status") == "generation_failed" and output_path.is_file():
+        existing_skeleton = read_json(output_path)
+        recovered_changes = repair_lion_melody_friction(existing_skeleton) if isinstance(existing_skeleton, dict) else []
+        if recovered_changes:
+            output_path.write_text(json.dumps(existing_skeleton, ensure_ascii=False, indent=2), encoding="utf-8")
+            try:
+                run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path, "--skeleton", output_path)
+            except ValueError:
+                pass
+            else:
+                record["status"] = "json_ready"
+                record["jsonUrl"] = record_url(record_dir, output_path)
+                if raw_path.is_file():
+                    record["rawUrl"] = record_url(record_dir, raw_path)
+                record["lastAutoRepairAttempts"] = 0
+                production_event(record, "失败结果已自动修复并通过检查", "；".join(recovered_changes))
+                save_record(record_dir, record)
+                return {**record, "skeleton": existing_skeleton}
+
     try:
         run_script(
             SCRIPTS_DIR / "generate_skeleton_json_mode.py",
@@ -979,6 +1124,12 @@ def generate_record_json(record_id: str) -> dict:
         production_event(record, "JSON 生成失败", str(error))
         save_record(record_dir, record)
         raise
+
+    generated_skeleton = read_json(output_path)
+    deterministic_changes = repair_lion_melody_friction(generated_skeleton) if isinstance(generated_skeleton, dict) else []
+    if deterministic_changes:
+        output_path.write_text(json.dumps(generated_skeleton, ensure_ascii=False, indent=2), encoding="utf-8")
+        production_event(record, "萨克斯已自动避让主旋律", "；".join(deterministic_changes))
 
     repair_attempts = 0
     try:
@@ -1403,7 +1554,7 @@ def next_frontend_version(pack_dir: Path) -> str:
     return f"v{max(versions, default=0) + 1:02d}"
 
 
-def update_frontend_catalog(pack_id: str, version: str, skeleton: dict, manifest_relative: str) -> None:
+def update_frontend_catalog(pack_id: str, version: str, skeleton: dict, design_card: dict, manifest_relative: str) -> None:
     catalog_path = FRONTEND_MUSIC_DIR / "catalog.json"
     if catalog_path.is_file():
         try:
@@ -1427,6 +1578,10 @@ def update_frontend_catalog(pack_id: str, version: str, skeleton: dict, manifest
         "packId": pack_id,
         "feeling": skeleton.get("feeling"),
         "groove": skeleton.get("groove"),
+        "title": design_card.get("title") or skeleton.get("feeling"),
+        "moodSummary": design_card.get("moodSummary") or "老师准备的音乐",
+        "grooveSummary": design_card.get("grooveSummary") or skeleton.get("groove"),
+        "bpm": skeleton.get("bpm"),
         "latestVersion": version,
         "manifest": manifest_relative,
         "versions": versions,
@@ -1466,6 +1621,10 @@ def publish_frontend_pack(job_id: str, gains: dict) -> dict:
     kit_id = safe_id(skeleton.get("kitId"))
     task_path = task_path_for_kit(kit_id)
     run_script(SCRIPTS_DIR / "validate_skeleton.py", "--task", task_path, "--skeleton", skeleton_path)
+    task = read_json(task_path)
+    design_card = task.get("designCard", {}) if isinstance(task, dict) else {}
+    if not isinstance(design_card, dict):
+        design_card = {}
 
     gain_values = {
         animal: max(0.0, min(1.5, float(gains.get(animal, 1.0))))
@@ -1533,6 +1692,9 @@ def publish_frontend_pack(job_id: str, gains: dict) -> dict:
                 "version": version,
                 "feeling": skeleton.get("feeling"),
                 "groove": skeleton.get("groove"),
+                "title": design_card.get("title") or skeleton.get("feeling"),
+                "moodSummary": design_card.get("moodSummary") or "老师准备的音乐",
+                "grooveSummary": design_card.get("grooveSummary") or skeleton.get("groove"),
                 "bpm": skeleton.get("bpm"),
                 "timeSignature": skeleton.get("timeSignature"),
                 "bars": skeleton.get("bars"),
@@ -1561,7 +1723,7 @@ def publish_frontend_pack(job_id: str, gains: dict) -> dict:
             target_dir.parent.mkdir(parents=True, exist_ok=True)
             staging_dir.replace(target_dir)
             manifest_relative = f"{pack_id}/{version}/manifest.json"
-            update_frontend_catalog(pack_id, version, skeleton, manifest_relative)
+            update_frontend_catalog(pack_id, version, skeleton, design_card, manifest_relative)
         except Exception:
             if staging_dir.is_dir():
                 shutil.rmtree(staging_dir)

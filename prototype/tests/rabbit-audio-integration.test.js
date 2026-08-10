@@ -4,7 +4,8 @@ const vm = require("vm");
 
 const prototypeRoot = path.join(__dirname, "..");
 const musicRoot = path.join(prototypeRoot, "assets", "music");
-const solfegeRoot = path.join(prototypeRoot, "assets", "solfege", "voice-katy-child-clean-v2");
+const solfegeRoot = path.join(prototypeRoot, "assets", "solfege", "voice-katy");
+const splicedSiPath = path.join(prototypeRoot, "assets", "solfege", "voice-katy-child-clean-v2", "si.wav");
 const publishedStemAnimals = ["dog", "rabbit", "bear", "cat", "lion"];
 const arrangementAnimals = ["dog", "bear", "cat", "lion"];
 const syllables = ["do", "re", "mi", "fa", "sol", "la", "si"];
@@ -51,7 +52,8 @@ function parsePcm16Wav(filePath) {
 }
 
 for (const syllable of syllables) {
-  const audio = parsePcm16Wav(path.join(solfegeRoot, `${syllable}.wav`));
+  const samplePath = syllable === "si" ? splicedSiPath : path.join(solfegeRoot, `${syllable}.wav`);
+  const audio = parsePcm16Wav(samplePath);
   if (audio.sampleRate !== 48000 || audio.channels !== 1 || audio.rms < 0.01) {
     throw new Error(`${syllable} 基础唱名素材规格或响度异常`);
   }
@@ -132,12 +134,12 @@ const context = {
 };
 vm.createContext(context);
 const appSource = fs.readFileSync(path.join(prototypeRoot, "app.js"), "utf8");
-vm.runInContext(`${appSource}\nglobalThis.__state = state; globalThis.__playSection = playSection;`, context);
+vm.runInContext(`${appSource}\nglobalThis.__state = state; globalThis.__playSection = playSection; globalThis.__playSolfegeSample = playSolfegeSample;`, context);
 context.__state.screen = "arrange";
 context.__state.mood = "happy";
 context.__state.groove = "bounce";
-context.__state.voice = { status: "ready", audioUrl: "blob:child-recording", blob: {} };
-context.__state.sections = [[...arrangementAnimals, "voice"], [], [], []];
+context.__state.voiceStickers = [{ id: "clip-1", name: "我的声音 1", audioUrl: "blob:child-recording", blob: {}, bpm: 96 }];
+context.__state.sections = [[...arrangementAnimals, "voice:clip-1"], [], [], []];
 played.length = 0;
 context.__playSection(0);
 
@@ -155,6 +157,24 @@ if (appElement.innerHTML.includes("小兔 · 唱名")) {
 }
 if (!played.some(audio => audio.src === "blob:child-recording" && audio.didPlay)) {
   throw new Error("儿童录音贴纸没有保留原有叠加播放行为");
+}
+
+played.length = 0;
+context.__playSolfegeSample("do", 261.6256);
+context.__playSolfegeSample("si", 493.8833);
+context.__playSolfegeSample("sol", 261.6256);
+context.__playSolfegeSample("la", 293.6648);
+context.__playSolfegeSample("si", 329.6276);
+if (!played.some(audio => audio.src === "assets/solfege/voice-katy/do.wav")) {
+  throw new Error("唱名示范没有使用原始音色 do");
+}
+if (!played.some(audio => audio.src === "assets/solfege/voice-katy-child-clean-v2/si.wav")) {
+  throw new Error("唱名示范没有保留拼接处理后的 si");
+}
+for (const syllable of ["sol", "la", "si"]) {
+  if (!played.some(audio => audio.src === `assets/solfege/voice-katy-natural-low-f/${syllable}.wav` && audio.playbackRate === 1)) {
+    throw new Error(`低音 ${syllable} 没有使用自然低音专用样本`);
+  }
 }
 
 console.log(JSON.stringify({

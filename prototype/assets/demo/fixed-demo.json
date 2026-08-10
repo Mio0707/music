@@ -19,7 +19,7 @@
     "meter": "2/4",
     "bpm": 64,
     "measuresPerPage": 4,
-    "voiceRoot": "assets/solfege/voice-katy-child-clean-v2"
+    "voiceRoot": "assets/solfege/voice-katy"
   },
   "piano": {
     "engine": "browser-web-audio",

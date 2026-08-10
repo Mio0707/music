@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 import argparse
+import importlib.util
 import json
 import math
 import mimetypes
 import os
 import re
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+import sys
+from http.server import ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.parse import unquote, urlparse
@@ -27,6 +29,23 @@ TONIC_MIDI = {
     "E": 64, "F": 65, "F#": 66, "GB": 66, "G": 67, "G#": 68,
     "AB": 68, "A": 69, "A#": 70, "BB": 70, "B": 71,
 }
+
+CHILDREN_STUDIO_PREFIX = "/children-music-studio"
+CHILDREN_STUDIO_SERVER = PROJECT_ROOT / "children-music-studio" / "studio" / "server.py"
+
+
+def load_children_studio_module():
+    """Load the children music studio so both tools can share this web server."""
+    spec = importlib.util.spec_from_file_location("children_music_studio_server", CHILDREN_STUDIO_SERVER)
+    if spec is None or spec.loader is None:
+        raise RuntimeError("无法加载儿童音乐设计台。")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[spec.name] = module
+    spec.loader.exec_module(module)
+    return module
+
+
+CHILDREN_STUDIO = load_children_studio_module()
 
 
 def load_local_env() -> None:
@@ -198,8 +217,8 @@ def normalize_score(candidate: dict, file_name: str) -> dict:
     }
 
 
-class Handler(BaseHTTPRequestHandler):
-    server_version = "AnimalMusicPrototype/0.2"
+class Handler(CHILDREN_STUDIO.Handler):
+    server_version = "AnimalBandPrototype/0.2"
 
     def send_json(self, status: int, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
@@ -211,8 +230,17 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_POST(self) -> None:
+        request_path = urlparse(self.path).path
+        if request_path.startswith(f"{CHILDREN_STUDIO_PREFIX}/"):
+            original_path = self.path
+            self.path = request_path.removeprefix(CHILDREN_STUDIO_PREFIX) or "/"
+            try:
+                CHILDREN_STUDIO.Handler.do_POST(self)
+            finally:
+                self.path = original_path
+            return
         try:
-            if urlparse(self.path).path != "/api/score/analyze":
+            if request_path != "/api/score/analyze":
                 self.send_error(404)
                 return
             length = int(self.headers.get("Content-Length", "0"))
@@ -230,6 +258,19 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         request_path = unquote(urlparse(self.path).path)
+        if request_path == CHILDREN_STUDIO_PREFIX:
+            self.send_response(308)
+            self.send_header("Location", f"{CHILDREN_STUDIO_PREFIX}/")
+            self.end_headers()
+            return
+        if request_path.startswith(f"{CHILDREN_STUDIO_PREFIX}/"):
+            original_path = self.path
+            self.path = request_path.removeprefix(CHILDREN_STUDIO_PREFIX) or "/"
+            try:
+                CHILDREN_STUDIO.Handler.do_GET(self)
+            finally:
+                self.path = original_path
+            return
         name = "index.html" if request_path in ("", "/") else request_path.lstrip("/")
         candidate = (ROOT / name).resolve()
         if candidate != ROOT.resolve() and ROOT.resolve() not in candidate.parents:
@@ -256,8 +297,12 @@ def main() -> int:
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--port", type=int, default=4173)
     args = parser.parse_args()
+    CHILDREN_STUDIO.JOBS_DIR.mkdir(parents=True, exist_ok=True)
+    CHILDREN_STUDIO.RECORDS_DIR.mkdir(parents=True, exist_ok=True)
+    CHILDREN_STUDIO.FRONTEND_MUSIC_DIR.mkdir(parents=True, exist_ok=True)
     server = ThreadingHTTPServer((args.host, args.port), Handler)
-    print(f"唱名教学原型已启动：http://{args.host}:{args.port}/")
+    print(f"教师备课平台已启动：http://{args.host}:{args.port}/")
+    print("儿童音乐设计台已合并，无需单独启动。")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

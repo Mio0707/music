@@ -1,9 +1,15 @@
 const animalInfo = {
-  bear: { name: "小熊", role: "键盘与主旋律", color: "#ef9a62", soft: "#fff3e9", image: "/assets/performer-bear.png" },
-  cat: { name: "小猫", role: "贝斯", color: "#d883b2", soft: "#fbeef6", image: "/assets/performer-cat.png" },
-  dog: { name: "小狗", role: "鼓组", color: "#6aa7d9", soft: "#edf6fd", image: "/assets/performer-dog.png" },
-  lion: { name: "小狮子", role: "中音萨克斯", color: "#d5a53e", soft: "#fff7df", image: "/assets/performer-lion.png" },
+  bear: { name: "小熊", role: "键盘与主旋律", color: "#ef9a62", soft: "#fff3e9", image: "assets/performer-bear.png" },
+  cat: { name: "小猫", role: "贝斯", color: "#d883b2", soft: "#fbeef6", image: "assets/performer-cat.png" },
+  dog: { name: "小狗", role: "鼓组", color: "#6aa7d9", soft: "#edf6fd", image: "assets/performer-dog.png" },
+  lion: { name: "小狮子", role: "中音萨克斯", color: "#d5a53e", soft: "#fff7df", image: "assets/performer-lion.png" },
 };
+
+const studioBaseUrl = new URL(".", window.location.href);
+
+function studioUrl(path) {
+  return new URL(String(path || "").replace(/^\/+/, ""), studioBaseUrl).href;
+}
 
 const $ = selector => document.querySelector(selector);
 const moodInput = $("#mood-input");
@@ -71,7 +77,7 @@ function setProgress(percent, title, copy) {
 }
 
 async function request(path, payload) {
-  const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const response = await fetch(studioUrl(path), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({ error: "平台没有返回可读取的数据。" }));
   if (!response.ok) throw new Error(data.error || "处理失败");
   return data;
@@ -193,7 +199,7 @@ previewButton.addEventListener("click", async () => {
   previewButton.textContent = "正在渲染…";
   try {
     productionRecord = await request("/api/records/preview", { recordId: productionRecord.recordId });
-    previewAudio.src = productionRecord.previewUrl;
+    previewAudio.src = studioUrl(productionRecord.previewUrl);
     previewBox.classList.remove("is-hidden");
     setStatus(workflowStatus, "试听已生成。请先听完整体与四个声部的关系。", "success");
     setProgress(82, "试听已经生成", "确认听感后，平台才会开放正式分轨。");
@@ -231,7 +237,7 @@ async function prepareMixer(job) {
   downloadBox.classList.add("is-hidden"); publishBox.classList.add("is-hidden");
   audioContext ||= new AudioContext();
   await Promise.all(job.stems.map(async stem => {
-    const response = await fetch(stem.url);
+    const response = await fetch(studioUrl(stem.url));
     buffers[stem.animal] = await audioContext.decodeAudioData(await response.arrayBuffer());
   }));
   job.stems.forEach(stem => tracksBox.appendChild(createTrack(stem)));
@@ -243,7 +249,7 @@ function createTrack(stem) {
   const animal = stem.animal; const info = animalInfo[animal];
   const toneOptions = animal === "bear" ? (currentJob.bearTones || []).map(tone => `<option value="${escapeHtml(tone.id)}" ${tone.id === (currentJob.bearTone || "grand_piano") ? "selected" : ""}>${escapeHtml(tone.label)}</option>`).join("") : "";
   const row = document.createElement("article"); row.className = "track"; row.dataset.animal = animal; row.style.setProperty("--track-color", info.color); row.style.setProperty("--track-soft", info.soft);
-  row.innerHTML = `<div class="animal-icon"><img src="${info.image}" alt=""></div><div class="track-name"><strong>${info.name}</strong><span>${info.role}</span></div><label class="volume-wrap"><input type="range" min="0" max="150" value="100"><span class="volume-value">100%</span></label><div class="track-buttons"><button class="tiny-button mute">静音</button><button class="tiny-button solo">独奏</button><button class="tiny-button export-stem">导出单轨</button></div>${animal === "bear" ? `<div class="tone-controls"><label>键盘音色<select class="tone-select">${toneOptions}</select></label><button class="tiny-button apply-tone">应用音色</button><span>和声保持不变</span></div>` : ""}`;
+  row.innerHTML = `<div class="animal-icon"><img src="${studioUrl(info.image)}" alt=""></div><div class="track-name"><strong>${info.name}</strong><span>${info.role}</span></div><label class="volume-wrap"><input type="range" min="0" max="150" value="100"><span class="volume-value">100%</span></label><div class="track-buttons"><button class="tiny-button mute">静音</button><button class="tiny-button solo">独奏</button><button class="tiny-button export-stem">导出单轨</button></div>${animal === "bear" ? `<div class="tone-controls"><label>键盘音色<select class="tone-select">${toneOptions}</select></label><button class="tiny-button apply-tone">应用音色</button><span>和声保持不变</span></div>` : ""}`;
   const slider = row.querySelector("input"); slider.addEventListener("input", () => { row.querySelector(".volume-value").textContent = `${slider.value}%`; updateGains(); });
   row.querySelector(".mute").addEventListener("click", event => { muted.has(animal) ? muted.delete(animal) : muted.add(animal); event.currentTarget.classList.toggle("is-active", muted.has(animal)); updateGains(); });
   row.querySelector(".solo").addEventListener("click", event => { soloed.has(animal) ? soloed.delete(animal) : soloed.add(animal); event.currentTarget.classList.toggle("is-active", soloed.has(animal)); updateGains(); });
@@ -254,14 +260,14 @@ function createTrack(stem) {
 
 async function applyBearTone(tone, button) {
   if (!currentJob) return; button.disabled = true; stopPlayback();
-  try { const data = await request("/api/tone", { jobId: currentJob.jobId, tone }); const response = await fetch(data.url); buffers.bear = await audioContext.decodeAudioData(await response.arrayBuffer()); currentJob.stems.find(stem => stem.animal === "bear").url = data.url; currentJob.bearTone = data.tone; setStatus(mixerStatus, `小熊键盘已切换为${data.label}`, "success"); }
+  try { const data = await request("/api/tone", { jobId: currentJob.jobId, tone }); const response = await fetch(studioUrl(data.url)); buffers.bear = await audioContext.decodeAudioData(await response.arrayBuffer()); currentJob.stems.find(stem => stem.animal === "bear").url = data.url; currentJob.bearTone = data.tone; setStatus(mixerStatus, `小熊键盘已切换为${data.label}`, "success"); }
   catch (error) { setStatus(mixerStatus, error.message, "error"); }
   finally { button.disabled = false; }
 }
 
 async function exportSingleStem(animal, gain, button) {
   const original = button.textContent; button.disabled = true; button.textContent = "生成中…";
-  try { const data = await request("/api/stem", { jobId: currentJob.jobId, animal, gain }); const link = document.createElement("a"); link.href = data.url; link.download = data.filename; link.click(); setStatus(mixerStatus, `${animalInfo[animal].name}单轨已导出`, "success"); }
+  try { const data = await request("/api/stem", { jobId: currentJob.jobId, animal, gain }); const link = document.createElement("a"); link.href = studioUrl(data.url); link.download = data.filename; link.click(); setStatus(mixerStatus, `${animalInfo[animal].name}单轨已导出`, "success"); }
   catch (error) { setStatus(mixerStatus, error.message, "error"); }
   finally { button.disabled = false; button.textContent = original; }
 }
@@ -276,14 +282,14 @@ stopButton.addEventListener("click", stopPlayback);
 
 exportButton.addEventListener("click", async () => {
   if (!currentJob) return; exportButton.disabled = true;
-  try { const data = await request("/api/mix", { jobId: currentJob.jobId, gains: currentGains() }); downloadLink.href = data.url; downloadLink.download = `${currentJob.kitId}_mix.wav`; downloadBox.classList.remove("is-hidden"); setStatus(mixerStatus, "当前混音已生成。", "success"); }
+  try { const data = await request("/api/mix", { jobId: currentJob.jobId, gains: currentGains() }); downloadLink.href = studioUrl(data.url); downloadLink.download = `${currentJob.kitId}_mix.wav`; downloadBox.classList.remove("is-hidden"); setStatus(mixerStatus, "当前混音已生成。", "success"); }
   catch (error) { setStatus(mixerStatus, error.message, "error"); }
   finally { exportButton.disabled = false; }
 });
 
 publishButton.addEventListener("click", async () => {
   if (!currentJob) return; publishButton.disabled = true; publishButton.textContent = "检查并保存中…"; stopPlayback();
-  try { const data = await request("/api/publish", { jobId: currentJob.jobId, gains: publishGains() }); publishResult.textContent = `已保存 ${data.packId} ${data.version}`; manifestLink.href = data.manifestUrl; publishBox.classList.remove("is-hidden"); setStatus(mixerStatus, "四条正式分轨已保存到儿童音乐设计台资源库。", "success"); setProgress(100, "这段儿童音乐已完成", "设计卡、JSON、试听、分轨和正式资源均已保存。"); }
+  try { const data = await request("/api/publish", { jobId: currentJob.jobId, gains: publishGains() }); publishResult.textContent = `已保存 ${data.packId} ${data.version}`; manifestLink.href = studioUrl(data.manifestUrl); publishBox.classList.remove("is-hidden"); setStatus(mixerStatus, "四条正式分轨已保存到儿童音乐设计台资源库。", "success"); setProgress(100, "这段儿童音乐已完成", "设计卡、JSON、试听、分轨和正式资源均已保存。"); }
   catch (error) { setStatus(mixerStatus, error.message, "error"); }
   finally { publishButton.disabled = false; publishButton.textContent = "保存正式分轨"; }
 });
