@@ -95,12 +95,5 @@
     throw new Error("该操作需要连接正式音乐服务。");
   }
 
-  function mountNotice() {
-    const notice = document.createElement("div");
-    notice.className = "demo-mode-notice";
-    notice.innerHTML = "<strong>线上演示模式</strong><span>使用预置音乐素材完整体验设计、试听、分轨与保存流程；不会调用 AI，也不会写入服务器。</span>";
-    document.body.prepend(notice);
-  }
-
-  window.ChildrenMusicDemo = { enabled, request, mountNotice };
+  window.ChildrenMusicDemo = { enabled, request };
 })();

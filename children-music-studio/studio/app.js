@@ -85,8 +85,6 @@ async function request(path, payload) {
   return data;
 }
 
-if (demoMode?.enabled) demoMode.mountNotice();
-
 function renderCard(card) {
   designCard = card;
   cardEditor.value = JSON.stringify(card, null, 2);
