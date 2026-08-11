@@ -6,6 +6,7 @@ const animalInfo = {
 };
 
 const studioBaseUrl = new URL(".", window.location.href);
+const demoMode = window.ChildrenMusicDemo;
 
 function studioUrl(path) {
   return new URL(String(path || "").replace(/^\/+/, ""), studioBaseUrl).href;
@@ -77,11 +78,14 @@ function setProgress(percent, title, copy) {
 }
 
 async function request(path, payload) {
+  if (demoMode?.enabled) return demoMode.request(path, payload);
   const response = await fetch(studioUrl(path), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
   const data = await response.json().catch(() => ({ error: "平台没有返回可读取的数据。" }));
   if (!response.ok) throw new Error(data.error || "处理失败");
   return data;
 }
+
+if (demoMode?.enabled) demoMode.mountNotice();
 
 function renderCard(card) {
   designCard = card;

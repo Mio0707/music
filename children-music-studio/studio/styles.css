@@ -17,6 +17,8 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; min-height: 100vh; color: var(--ink); font-family: "Microsoft YaHei", "PingFang SC", system-ui, sans-serif; background: radial-gradient(circle at 5% 0%, rgba(255, 207, 130, .4), transparent 30rem), radial-gradient(circle at 100% 12%, rgba(120, 205, 179, .2), transparent 28rem), var(--canvas); }
+.demo-mode-notice { position: sticky; top: 0; z-index: 20; display: flex; justify-content: center; gap: 12px; padding: 10px 20px; color: #69401e; background: #fff1c7; border-bottom: 1px solid #ebcf83; font-size: 14px; }
+.demo-mode-notice strong { white-space: nowrap; }
 button, input, textarea, select { font: inherit; }
 button { cursor: pointer; }
 .is-hidden { display: none !important; }

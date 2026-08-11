@@ -5,7 +5,6 @@ on:
   push:
     branches:
       - main
-      - codex/music-production-studio-20260727
   workflow_dispatch:
 
 permissions:
@@ -31,10 +30,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Assemble static demo
+        run: |
+          mkdir -p pages-site/children-music-studio
+          cp -R prototype/. pages-site/
+          cp -R children-music-studio/studio/. pages-site/children-music-studio/
+
       - name: Upload prototype artifact
         uses: actions/upload-pages-artifact@v4
         with:
-          path: ./prototype
+          path: ./pages-site
 
       - name: Deploy to Pages
         id: deployment

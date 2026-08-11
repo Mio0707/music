@@ -41,7 +41,7 @@ context.__render();
 if (!appElement.innerHTML.includes("旋律手势分析") || !appElement.innerHTML.includes("贴纸旋律创作")) throw new Error("教师备课首页没有同时显示两大功能");
 context.__analysisState.teacherMode = "creation";
 context.__render();
-if (!appElement.innerHTML.includes("/children-music-studio/")) throw new Error("儿童音乐设计台没有接入教师备课平台");
+if (!appElement.innerHTML.includes("children-music-studio/")) throw new Error("儿童音乐设计台没有接入教师备课平台");
 if (appElement.innerHTML.includes("独立窗口打开")) throw new Error("儿童音乐设计台仍要求从独立窗口打开");
 if (appElement.innerHTML.includes("返回备课首页")) throw new Error("贴纸旋律创作页仍显示重复的返回按钮");
 if (appElement.innerHTML.includes("工作台已经整合到备课平台")) throw new Error("贴纸旋律创作页仍显示重复的整合说明");

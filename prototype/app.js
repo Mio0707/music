@@ -24,7 +24,7 @@ const SOLFEGE_SOURCE_FREQUENCIES = {
 };
 const SOLFEGE_MIN_VOICE_SECONDS = 0.8;
 const SOLFEGE_RECOMMENDED_VOICE_SECONDS = "1.2–1.8";
-const CHILDREN_MUSIC_STUDIO_URL = "/children-music-studio/";
+const CHILDREN_MUSIC_STUDIO_URL = "children-music-studio/";
 const grooveAudio = {
   steady: { bpm: 88, duration: 5.454542 },
   bounce: { bpm: 96, duration: 5 },
