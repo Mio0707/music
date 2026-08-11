@@ -1,0 +1,61 @@
+{
+  "title": "雨后晴天蹦蹦跳",
+  "designIntent": "用明亮跳跃的旋律表现夏天雨后放晴的喜悦，配合蹦蹦跳跳的律动让孩子跟唱跟跳",
+  "moodSummary": "夏天，下完雨后天晴了我很高兴",
+  "grooveSummary": "蹦蹦跳跳回家",
+  "grooveFamily": "bounce",
+  "bpm": 112,
+  "coreMotif": {
+    "scaleDegrees": [
+      1,
+      5,
+      6
+    ],
+    "referenceDurations": [
+      0.5,
+      0.5,
+      1
+    ],
+    "identityNote": 5
+  },
+  "harmonyPlan": [
+    "C",
+    "F",
+    "G",
+    "C"
+  ],
+  "melodyProfile": {
+    "contour": "UUDU",
+    "range": "1-6",
+    "density": "中等偏密，前半拍跳跃短音，后半拍舒展",
+    "phraseBreath": "第4拍末和第8拍前有明显气口",
+    "ending": "第8拍落在主音1，最后1拍完成收束",
+    "openingDegree": 1,
+    "highPointBeat": 6,
+    "phraseStructure": "两小节对称乐句，第一小节上行开放，第二小节回落收束",
+    "cadenceDegree": 1,
+    "repetitionStrategy": "核心动机在第一小节出现一次，第二小节用变化重复和连接音展开"
+  },
+  "arrangement": {
+    "keyboardRole": "唯一前景旋律，演奏完整主旋律",
+    "bassRole": "根音长音推动，每小节2拍一个根音，第7-8拍保持主音",
+    "drumRole": "轻快蹦跳感，底鼓强调1、3拍，军鼓轻点2、4拍",
+    "saxRole": "完整回应乐句",
+    "saxPhrasePlan": "第2小节第5-6拍演奏一个3音回应乐句（5-3-1），与主旋律形成呼应"
+  },
+  "safetyReview": {
+    "likelyConflicts": [
+      "第5-6拍萨克斯回应与主旋律可能同时活跃",
+      "第7-8拍收束区贝斯可能加入经过音"
+    ],
+    "resolutions": [
+      "主旋律在第5-6拍使用长音或休止，让萨克斯回应清晰突出",
+      "贝斯在第7-8拍严格保持主音长音，不添加任何经过音或装饰"
+    ]
+  },
+  "designId": "child_20260811_135323_a2048e",
+  "moodInput": "夏天，下完雨后天晴了我很高兴",
+  "grooveInput": "蹦蹦跳跳回家",
+  "model": "qwen3.7-max",
+  "version": "children-design-v1"
+}

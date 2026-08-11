@@ -1,0 +1,370 @@
+{
+  "schemaVersion": "1.0-draft",
+  "lessonId": "phonk-style-v1",
+  "status": "implemented_demo",
+  "source": {
+    "type": "style",
+    "name": "PHONK",
+    "artist": null,
+    "audioProvided": false,
+    "analysisConfidence": "typical_style"
+  },
+  "classProfile": {
+    "grade": "5-6",
+    "durationMinutes": 40,
+    "studentCount": 36,
+    "groupCount": 3,
+    "recordingEnabled": true,
+    "targetWorkSeconds": 46
+  },
+  "musicAnalysis": {
+    "childSummary": "PHONK 是一种节拍很有力量的电子音乐。它常把鼓点、低沉的 808 和清亮的 Cowbell 放在一起，听起来有点神秘，也很有冲劲。",
+    "bpm": 125,
+    "bpmMeaning": "这是当前课堂示范作品的速度，不代表所有 PHONK 都是同一速度。",
+    "timeSignature": "4/4",
+    "groove": "steady_driving",
+    "grooveExplanation": "稳定的鼓点一直向前，细碎的声音填满空隙，低音在重点位置增加力量。",
+    "rhythmElements": [
+      {
+        "id": "kick",
+        "name": "Kick",
+        "childName": "底鼓",
+        "role": "pulse"
+      },
+      {
+        "id": "clap",
+        "name": "Clap",
+        "childName": "拍手音",
+        "role": "accent"
+      },
+      {
+        "id": "hihat",
+        "name": "Hi-Hat",
+        "childName": "踩镲",
+        "role": "subdivision"
+      }
+    ],
+    "signatureElements": [
+      {
+        "id": "cowbell",
+        "type": "timbre",
+        "name": "Cowbell",
+        "childName": "明亮的牛铃音色"
+      },
+      {
+        "id": "bass808",
+        "type": "timbre",
+        "name": "808 Bass",
+        "childName": "低沉的电子低音"
+      }
+    ],
+    "formIdea": "从少量声音开始，逐层加入鼓和低音，在高潮全部出现；中间短暂留白后再次回归。"
+  },
+  "teachingElements": [
+    {
+      "id": "kick",
+      "professionalName": "Kick",
+      "childName": "底鼓",
+      "syllable": "咚",
+      "childExplanation": "像‘咚’的低鼓声，负责稳住节拍。",
+      "musicalFunction": [
+        "pulse",
+        "low_percussion"
+      ],
+      "performance": {
+        "source": "大腿或脚",
+        "action": "轻拍大腿或轻踩地面",
+        "mapping": "kick-like",
+        "confidence": "B"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "electronic_kick"
+      },
+      "practiceGrid": [
+        "咚",
+        "咚",
+        "咚",
+        "咚",
+        "咚",
+        "咚",
+        "咚",
+        "咚"
+      ]
+    },
+    {
+      "id": "clap",
+      "professionalName": "Clap",
+      "childName": "拍手音",
+      "syllable": "啪",
+      "childExplanation": "像‘啪’的短声音，常在第 2、4 拍让节奏更醒目。",
+      "musicalFunction": [
+        "accent",
+        "high_percussion"
+      ],
+      "performance": {
+        "source": "双手或纸袋",
+        "action": "拍手或轻拍纸袋",
+        "mapping": "clap-like",
+        "confidence": "A"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "electronic_clap"
+      },
+      "practiceGrid": [
+        "空",
+        "空",
+        "啪",
+        "空",
+        "空",
+        "空",
+        "啪",
+        "空"
+      ]
+    },
+    {
+      "id": "hihat",
+      "professionalName": "Hi-Hat",
+      "childName": "踩镲",
+      "syllable": "呲呲",
+      "childExplanation": "像‘呲呲’的细碎声音，把大拍之间的空格填满。",
+      "musicalFunction": [
+        "subdivision",
+        "high_percussion"
+      ],
+      "performance": {
+        "source": "密封塑料容器和少量米粒",
+        "action": "小幅度摇动",
+        "mapping": "hihat-like",
+        "confidence": "B"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "electronic_hihat"
+      },
+      "practiceGrid": [
+        "呲呲",
+        "呲呲",
+        "呲呲",
+        "呲呲",
+        "呲呲",
+        "呲呲",
+        "呲呲",
+        "呲呲"
+      ]
+    }
+  ],
+  "signatureSounds": [
+    {
+      "id": "cowbell",
+      "type": "timbre",
+      "professionalName": "Cowbell",
+      "childName": "牛铃音色",
+      "childExplanation": "明亮的‘当当声’，经常重复一小段旋律，是 PHONK 很容易被认出的声音。",
+      "experience": {
+        "mode": "object-comparison-and-browser",
+        "object": "安全金属容器",
+        "mappingConfidence": "C"
+      }
+    },
+    {
+      "id": "bass808",
+      "type": "timbre",
+      "professionalName": "808 Bass",
+      "childName": "电子低音",
+      "childExplanation": "来自鼓机的低音鼓，拉长以后像贝斯一样很低、很重。",
+      "experience": {
+        "mode": "browser",
+        "mappingConfidence": "A"
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "intro",
+      "order": 1,
+      "type": "style_intro",
+      "title": "PHONK",
+      "listenCues": [
+        "稳定节拍",
+        "Cowbell 当当声",
+        "808 低沉重音"
+      ]
+    },
+    {
+      "id": "rhythm",
+      "order": 2,
+      "type": "rhythm_learning",
+      "title": "身体里的鼓",
+      "groupOrder": [
+        "kick",
+        "clap",
+        "hihat"
+      ],
+      "practiceBarsPerGroup": 2,
+      "highlightCurrentBeat": true
+    },
+    {
+      "id": "ensemble",
+      "order": 3,
+      "type": "layered_ensemble",
+      "title": "节奏合奏",
+      "countInBeats": 4,
+      "entryOrder": [
+        "kick",
+        "clap",
+        "hihat"
+      ],
+      "showCurrentBeat": true
+    },
+    {
+      "id": "signature",
+      "order": 4,
+      "type": "signature_sounds",
+      "title": "Cowbell 与 808",
+      "elements": [
+        "cowbell",
+        "bass808"
+      ]
+    },
+    {
+      "id": "recording",
+      "order": 5,
+      "type": "recording_workshop",
+      "title": "录音工坊",
+      "recordTracks": [
+        "kick",
+        "clap",
+        "hihat"
+      ],
+      "countInBeats": 4,
+      "recordBars": 2,
+      "fallbackEnabled": true
+    },
+    {
+      "id": "arrangement",
+      "order": 6,
+      "type": "section_arrangement",
+      "title": "编一首 PHONK",
+      "arrangementId": "phonk_24_bar"
+    },
+    {
+      "id": "performance",
+      "order": 7,
+      "type": "class_performance",
+      "title": "全班一起演奏",
+      "countInBeats": 4,
+      "modes": [
+        "section_rehearsal",
+        "full_performance"
+      ]
+    }
+  ],
+  "arrangement": {
+    "id": "phonk_24_bar",
+    "targetDurationSeconds": 46,
+    "calculatedDurationSeconds": 46.1,
+    "bpm": 125,
+    "timeSignature": "4/4",
+    "bars": 24,
+    "tracks": [
+      {
+        "id": "kick",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "clap",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "hihat",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "cowbell",
+        "source": "browser"
+      },
+      {
+        "id": "bass808",
+        "source": "browser"
+      }
+    ],
+    "sections": [
+      {
+        "id": "intro",
+        "label": "开场",
+        "bars": 4,
+        "activeTracks": [
+          "hihat",
+          "cowbell"
+        ]
+      },
+      {
+        "id": "entry",
+        "label": "节奏进入",
+        "bars": 4,
+        "activeTracks": [
+          "kick",
+          "clap",
+          "hihat",
+          "cowbell"
+        ]
+      },
+      {
+        "id": "drop",
+        "label": "第一次爆发",
+        "bars": 8,
+        "activeTracks": [
+          "kick",
+          "clap",
+          "hihat",
+          "cowbell",
+          "bass808"
+        ]
+      },
+      {
+        "id": "break",
+        "label": "留白变化",
+        "bars": 4,
+        "activeTracks": [
+          "cowbell"
+        ]
+      },
+      {
+        "id": "final",
+        "label": "最后爆发",
+        "bars": 4,
+        "activeTracks": [
+          "kick",
+          "clap",
+          "hihat",
+          "cowbell",
+          "bass808"
+        ]
+      }
+    ]
+  },
+  "safety": {
+    "approvedObjects": [
+      "大腿",
+      "双手",
+      "纸袋",
+      "密封塑料容器",
+      "安全金属容器"
+    ],
+    "warnings": [
+      "小颗粒容器必须密封并由老师检查。",
+      "金属物只能轻敲。",
+      "不使用玻璃、尖锐或生锈物品。"
+    ]
+  },
+  "review": {
+    "musicChecked": true,
+    "teachingChecked": true,
+    "safetyChecked": true,
+    "audioRightsChecked": true,
+    "audioRightsNote": "当前示范使用浏览器合成声和本地可控资源，不包含商业歌曲。"
+  }
+}
+

@@ -13,6 +13,24 @@ const SOLFEGE_NATURAL_LOW_FREQUENCIES = {
   "la-62": 293.6648,
   "si-64": 329.6276
 };
+const PHONK_BPM = 125;
+const PHONK_BEATS_PER_BAR = 4;
+const PHONK_DEFAULT_PATTERN = {
+  kick: [1, 0, 1, 0, 1, 0, 1, 0],
+  snare: [0, 0, 1, 0, 0, 0, 1, 0]
+};
+const PHONK_DEFAULT_SECTIONS = [
+  { id: "intro", label: "开场", bars: 4, layers: { kick: false, clap: false, hihat: true, bass808: false, cowbell: true } },
+  { id: "enter", label: "节奏进入", bars: 4, layers: { kick: true, clap: true, hihat: true, bass808: false, cowbell: true } },
+  { id: "drop", label: "第一次爆发", bars: 8, layers: { kick: true, clap: true, hihat: true, bass808: true, cowbell: true } },
+  { id: "break", label: "留白变化", bars: 4, layers: { kick: false, clap: false, hihat: false, bass808: false, cowbell: true } },
+  { id: "final", label: "最后爆发", bars: 4, layers: { kick: true, clap: true, hihat: true, bass808: true, cowbell: true } }
+];
+const PHONK_TRACKS = [
+  { id: "kick", label: "Kick", cn: "底鼓", sound: "咚", image: "assets/stickers/phonk-lion-pat-thighs.png", action: "拍腿或轻跺脚", description: "像“咚”的低鼓声，负责稳住节拍。" },
+  { id: "clap", label: "Clap", cn: "拍手音", sound: "啪", image: "assets/stickers/phonk-lion-clap.png", action: "拍手或轻拍纸袋", description: "像“啪”的短声音，常让第 2、4 拍更醒目。" },
+  { id: "hihat", label: "Hi-Hat", cn: "踩镲", sound: "呲", image: "assets/stickers/phonk-lion-shaker.png", action: "摇密封米粒瓶", description: "像“呲呲”的细碎声音，填满节拍之间的空隙。" }
+];
 const SOLFEGE_SOURCE_FREQUENCIES = {
   do: 261.6256,
   re: 293.6648,
@@ -264,6 +282,45 @@ function gestureById(id) {
   return gestureLibrary.find(gesture => gesture.id === id) || gestureLibrary[0];
 }
 
+const GESTURE_MOTION_PATHS = {
+  rest_line: { d: "M116 180 H524", landmarks: [0, .25, .5, .75, 1] },
+  hold: { d: "M52 180 H588", landmarks: [0, .25, .5, .75, 1] },
+  rise: { d: "M134 323 L503 37", landmarks: [0, .25, .5, .75, 1] },
+  fall: { d: "M134 37 L503 323", landmarks: [0, .25, .5, .75, 1] },
+  arch: { d: "M94 298 C190 54 450 54 545 298", points: [[94,298],[320,65],[545,298]] },
+  valley: { d: "M86 82 C205 302 430 302 554 82", points: [[86,82],[320,246],[554,82]] },
+  climb_arcs: { d: "M54 286 C82 212 118 190 150 248 C184 164 222 140 258 210 C296 118 340 96 382 174 C426 76 490 54 558 144", points: [[54,286],[102,207],[150,248],[210,158],[258,210],[331,111],[382,174],[468,71],[558,144]] },
+  descend_arcs: { d: "M58 132 C102 54 164 78 202 170 C240 96 284 118 318 206 C354 142 396 160 428 240 C466 184 510 204 558 286", points: [[58,132],[126,75],[202,170],[264,116],[318,206],[377,155],[428,240],[489,198],[558,286]] },
+  climb_arcs_three: { d: "M55 276 C91 196 132 171 171 235 C211 142 258 115 300 205 C348 98 418 65 486 181", points: [[55,276],[113,195],[171,235],[238,139],[300,205],[397,91],[486,181]] },
+  descend_arcs_three: { d: "M55 126 C99 82 151 91 198 162 C244 101 299 111 350 218 C402 157 474 173 553 279", points: [[55,126],[126,100],[198,162],[272,117],[350,218],[438,166],[553,279]] },
+  accent_hold: { d: "M55 251 L105 146 L144 205 L200 205 L246 175 H585", points: [[55,251],[105,146],[144,205],[200,205],[246,175],[585,175]] },
+  bounces: { d: "M55 262 C82 174 126 174 154 262 C184 174 228 174 258 262 C290 174 334 174 364 262 C398 174 446 174 482 262 C512 220 538 220 558 262", points: [[55,262],[104,196],[154,262],[208,196],[258,262],[312,196],[364,262],[437,196],[482,262],[532,230],[558,262]] },
+  circle: { d: "M320 28 C403 28 470 96 470 180 C470 264 403 332 320 332 C237 332 170 264 170 180 C170 96 237 28 320 28 Z", landmarks: [0, .25, .5, .75, 1] },
+  triangle: { d: "M171 302 L320 42 L470 302 Z", landmarks: [0, .333, .667, 1] },
+  square: { d: "M120 74 L520 74 L520 286 L120 286 Z", landmarks: [0, .25, .5, .75, 1] },
+  wave: { d: "M62 184 C126 72 194 72 258 184 C322 296 390 296 454 184 C500 104 532 116 572 184", points: [[62,184],[160,100],[258,184],[356,268],[454,184],[520,124],[572,184]] },
+  waltz_sway: { d: "M48 187 C100 202 106 278 164 278 C248 278 253 85 399 86 C523 87 481 244 591 250", points: [[48,187],[164,278],[399,86],[591,250]] },
+  three_beat_sweep: { d: "M50 75 C98 127 111 284 210 291 C304 297 428 120 522 123 C577 124 599 155 577 197", points: [[50,75],[210,291],[522,123],[577,197]] },
+  three_petal: { d: "M292 282 C245 324 170 286 153 238 C135 187 175 141 235 154 C260 160 270 146 258 126 C225 63 270 26 320 28 C371 27 415 65 382 127 C370 148 381 162 405 155 C466 140 506 187 489 238 C472 291 394 320 347 283", points: [[292,282],[153,238],[235,154],[320,28],[405,155],[489,238],[347,283]] },
+  infinity: { d: "M89 164 C107 80 208 53 320 180 C432 53 533 80 551 164 C573 270 446 324 320 180 C208 324 106 278 89 207", landmarks: [0, .167, .333, .5, .667, .833, 1] },
+  spiral: { d: "M208 314 C116 228 155 79 278 47 C412 12 521 105 469 229 C430 320 300 331 256 250 C220 184 271 122 335 130 C391 138 409 192 378 225 C357 247 328 224 329 204", landmarks: [0, .167, .333, .5, .667, .833, 1] },
+  three_peaks: { d: "M72 276 L158 102 L238 276 L320 82 L402 276 L486 112 L566 276", points: [[72,276],[158,102],[238,276],[320,82],[402,276],[486,112],[566,276]] },
+  pulses: { d: "M70 210 C96 160 128 160 154 210 C180 160 212 160 238 210 C264 160 296 160 322 210 C348 160 380 160 406 210 C438 160 480 160 514 210", points: [[70,210],[112,173],[154,210],[196,173],[238,210],[280,173],[322,210],[364,173],[406,210],[460,173],[514,210]] }
+};
+
+function gestureMotionMarkup(gestureId, className = "swan-main-gesture") {
+  const motion = GESTURE_MOTION_PATHS[gestureId] || GESTURE_MOTION_PATHS.hold;
+  const gesture = gestureById(gestureId);
+  return `<div class="gesture-motion-frame">
+    <img class="${className}" src="${gesture.image}" alt="${escapeHtml(gesture.label)}">
+    <svg class="gesture-motion-overlay gesture-motion ${gesture.kind === "rest" ? "rest-motion" : ""}" data-gesture-motion="${gestureId}" viewBox="0 0 640 360" aria-hidden="true">
+      <path class="gesture-motion-line" data-gesture-motion-path d="${motion.d}"></path>
+      <circle class="gesture-motion-halo" data-gesture-motion-dot r="19" cx="0" cy="0"></circle>
+      <circle class="gesture-motion-dot" data-gesture-motion-dot r="9" cx="0" cy="0"></circle>
+    </svg>
+  </div>`;
+}
+
 function gestureScopeLabel(scope) {
   return scope === "3/4" ? "3/4 专用" : scope === "4/4" ? "4/4 专用" : "所有拍号通用";
 }
@@ -384,6 +441,21 @@ const savedSections = Array.isArray(savedPostcard?.sections) && savedPostcard.se
 
 const state = {
   screen: "home",
+  phonkStep: 0,
+  phonkPracticePart: 0,
+  phonkPattern: structuredClone(PHONK_DEFAULT_PATTERN),
+  phonkSections: structuredClone(PHONK_DEFAULT_SECTIONS),
+  phonkSelectedSection: 0,
+  phonkRecordIndex: 0,
+  phonkRecordStatus: "idle",
+  phonkCountdown: 4,
+  phonkRecordings: { kick: null, clap: null, hihat: null },
+  phonkPerformanceMode: "practice",
+  phonkActiveSection: 0,
+  phonkPlaying: false,
+  phonkEnsembleStatus: "idle",
+  phonkEnsembleCountdown: 4,
+  phonkCompleted: false,
   mood: Object.hasOwn(moods, savedPostcard?.mood) ? savedPostcard.mood : null,
   groove: Object.hasOwn(grooves, savedPostcard?.groove) ? savedPostcard.groove : null,
   feelMode: "melody",
@@ -400,6 +472,7 @@ const state = {
   classPlaying: false,
   swanSection: 0,
   swanProgress: 0,
+  swanPausedAt: null,
   teacherStep: "input",
   teacherMode: "hub",
   scoreStep: savedScoreSession?.draft ? (savedScoreSession.scorePublished ? "published" : "review") : "input",
@@ -427,6 +500,7 @@ const state = {
   musicSource: savedPostcard?.musicSource === "teacher" ? "teacher" : "system",
   teacherMusicPacks: [],
   teacherMusicLoading: true,
+  teacherMusicOpen: false,
   selectedTeacherPack: savedPostcard?.teacherPack || null,
   packPreviewing: false,
   playbackRate: 1,
@@ -483,6 +557,9 @@ const swanGestureImageCache = new Map();
 let activeBodyAudio;
 let activeBodyFrame;
 let activePoemAudio;
+let phonkPlaybackToken = 0;
+let phonkRecordingCancelled = false;
+let activePhonkAudios = [];
 let teacherAudioFile;
 let teacherAudioPreviewUrl = CARMEN_AUDIO;
 let teacherPreviewMarkedGroup = -1;
@@ -600,6 +677,7 @@ function stopSwanMelody({ reset = false } = {}) {
   activeSwanAudio?.pause();
   activeSwanAudio = null;
   state.classPlaying = false;
+  state.swanPausedAt = null;
   if (reset) state.swanProgress = 0;
 }
 
@@ -655,6 +733,373 @@ function tone(frequency, duration = 0.18, volume = 0.12, type = "sine") {
   oscillator.connect(gain).connect(ctx.destination);
   oscillator.start();
   oscillator.stop(ctx.currentTime + duration);
+}
+
+function phonkKick() {
+  drum(0.9);
+}
+
+function phonkClap() {
+  const ctx = getAudioContext();
+  const buffer = ctx.createBuffer(1, ctx.sampleRate * 0.08, ctx.sampleRate);
+  const data = buffer.getChannelData(0);
+  for (let i = 0; i < data.length; i += 1) data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (data.length * 0.18));
+  const source = ctx.createBufferSource();
+  const filter = ctx.createBiquadFilter();
+  const gain = ctx.createGain();
+  filter.type = "highpass"; filter.frequency.value = 900;
+  gain.gain.value = 0.22;
+  source.buffer = buffer;
+  source.connect(filter).connect(gain).connect(ctx.destination);
+  source.start();
+}
+
+function phonkHat() { tone(5200, 0.055, 0.045, "square"); }
+function phonkBass() {
+  const ctx = getAudioContext();
+  const now = ctx.currentTime;
+  const output = ctx.createGain();
+  const filter = ctx.createBiquadFilter();
+  const sub = ctx.createOscillator();
+  const body = ctx.createOscillator();
+  const bodyGain = ctx.createGain();
+
+  output.gain.setValueAtTime(0.34, now);
+  output.gain.exponentialRampToValueAtTime(0.001, now + 0.68);
+  filter.type = "lowpass";
+  filter.frequency.setValueAtTime(620, now);
+  filter.frequency.exponentialRampToValueAtTime(170, now + 0.58);
+  sub.type = "sine";
+  sub.frequency.setValueAtTime(82, now);
+  sub.frequency.exponentialRampToValueAtTime(49, now + 0.55);
+  body.type = "triangle";
+  body.frequency.setValueAtTime(164, now);
+  body.frequency.exponentialRampToValueAtTime(98, now + 0.5);
+  bodyGain.gain.value = 0.24;
+
+  sub.connect(filter);
+  body.connect(bodyGain).connect(filter);
+  filter.connect(output).connect(ctx.destination);
+  sub.start(now);
+  body.start(now);
+  sub.stop(now + 0.7);
+  body.stop(now + 0.7);
+}
+function phonkCowbell() { tone(740, 0.11, 0.08, "square"); tone(1040, 0.08, 0.04, "square"); }
+
+function phonkStepSounds(step, layers, pattern = state.phonkPattern) {
+  if (layers.kick && !state.phonkRecordings.kick?.audioUrl && pattern.kick[step]) phonkKick();
+  if (layers.clap && !state.phonkRecordings.clap?.audioUrl && pattern.snare[step]) phonkClap();
+  if (layers.hihat && !state.phonkRecordings.hihat?.audioUrl) phonkHat();
+  if (layers.bass808 && step % 4 === 0) phonkBass();
+  if (layers.cowbell && (step === 1 || step === 5)) phonkCowbell();
+}
+
+function stopPhonkRecordedAudio() {
+  activePhonkAudios.forEach(audio => {
+    audio.pause();
+    audio.currentTime = 0;
+  });
+  activePhonkAudios = [];
+}
+
+function playPhonkRecordedTrack(trackId) {
+  const recording = state.phonkRecordings[trackId];
+  if (!recording?.audioUrl) return;
+  const audio = new Audio(recording.audioUrl);
+  audio.volume = trackId === "hihat" ? 0.7 : 0.9;
+  activePhonkAudios.push(audio);
+  const release = () => { activePhonkAudios = activePhonkAudios.filter(item => item !== audio); };
+  audio.addEventListener("ended", release, { once: true });
+  audio.play().catch(release);
+}
+
+function playPhonkSection(sectionIndex, onDone) {
+  const section = state.phonkSections[sectionIndex];
+  const token = phonkPlaybackToken;
+  if (!section) return onDone?.();
+  const stepMs = 60000 / PHONK_BPM / 2;
+  const totalSteps = section.bars * 8;
+  state.phonkPlaying = true;
+  state.phonkActiveSection = sectionIndex;
+  render();
+  for (let index = 0; index < totalSteps; index += 1) {
+    later(() => {
+      if (!state.phonkPlaying || token !== phonkPlaybackToken) return;
+      if (index % 16 === 0) {
+        ["kick", "clap", "hihat"].forEach(trackId => {
+          if (section.layers[trackId]) playPhonkRecordedTrack(trackId);
+        });
+      }
+      document.querySelectorAll("[data-phonk-play-step]").forEach(dot => dot.classList.toggle("active", Number(dot.dataset.phonkPlayStep) === index % 8));
+      phonkStepSounds(index % 8, section.layers);
+    }, index * stepMs);
+  }
+  later(() => {
+    if (!state.phonkPlaying || token !== phonkPlaybackToken) return;
+    if (onDone) onDone();
+    else { state.phonkPlaying = false; render(); }
+  }, totalSteps * stepMs + 30);
+}
+
+function previewPhonkSection(sectionIndex = state.phonkSelectedSection) {
+  if (state.phonkPlaying) return stopPhonkPlayback();
+  clearTimers();
+  stopPhonkRecordedAudio();
+  phonkPlaybackToken += 1;
+  playPhonkSection(sectionIndex);
+}
+
+function playPhonkWork() {
+  clearTimers();
+  stopPhonkRecordedAudio();
+  phonkPlaybackToken += 1;
+  const token = phonkPlaybackToken;
+  state.phonkPlaying = true;
+  state.phonkCompleted = false;
+  render();
+  let index = 0;
+  const next = () => {
+    if (!state.phonkPlaying || token !== phonkPlaybackToken) return;
+    if (index >= state.phonkSections.length) {
+      state.phonkPlaying = false;
+      state.phonkCompleted = true;
+      render();
+      showToast("完成了，这是你的第一首 Phonk Beat");
+      return;
+    }
+    playPhonkSection(index, () => { index += 1; next(); });
+  };
+  next();
+}
+
+function stopPhonkPlayback() {
+  phonkPlaybackToken += 1;
+  state.phonkPlaying = false;
+  state.phonkEnsembleStatus = "idle";
+  state.phonkEnsembleCountdown = 4;
+  clearTimers();
+  stopPhonkRecordedAudio();
+  render();
+}
+
+function previewPhonkCharacteristic(kind) {
+  if (kind === "cowbell") {
+    phonkCowbell();
+    later(phonkCowbell, 480);
+    later(phonkCowbell, 960);
+    return;
+  }
+  phonkBass();
+  later(phonkBass, 680);
+  later(phonkBass, 1360);
+}
+
+function previewPhonkPractice() {
+  const track = PHONK_TRACKS[state.phonkPracticePart];
+  if (!track) return;
+  const sounds = { kick: phonkKick, clap: phonkClap, hihat: phonkHat };
+  const play = sounds[track.id];
+  const interval = 60000 / PHONK_BPM;
+  clearTimers();
+  for (let beat = 0; beat < 8; beat += 1) {
+    later(() => {
+      document.querySelectorAll("[data-phonk-practice-beat]").forEach((element, index) => element.classList.toggle("active", index === beat));
+    }, beat * interval);
+    const shouldPlay = track.id !== "clap" || beat % 4 === 1 || beat % 4 === 3;
+    if (shouldPlay) {
+      const repeats = track.id === "hihat" ? [0, interval / 2] : [0];
+      repeats.forEach(offset => later(play, beat * interval + offset));
+    }
+  }
+  later(() => document.querySelectorAll("[data-phonk-practice-beat]").forEach(element => element.classList.remove("active")), 8 * interval);
+}
+
+function previewPhonkEnsemble() {
+  if (state.phonkPlaying) return stopPhonkPlayback();
+  clearTimers();
+  phonkPlaybackToken += 1;
+  state.phonkPlaying = true;
+  state.phonkEnsembleStatus = "countdown";
+  state.phonkEnsembleCountdown = 4;
+  render();
+  const token = phonkPlaybackToken;
+  const stepMs = 60000 / PHONK_BPM / 2;
+  const beatMs = stepMs * 2;
+  for (let count = 4; count >= 1; count -= 1) {
+    later(() => {
+      if (!state.phonkPlaying || token !== phonkPlaybackToken) return;
+      state.phonkEnsembleCountdown = count;
+      drum(count === 1 ? 1.25 : 0.75);
+      render();
+    }, (4 - count) * beatMs);
+  }
+  for (let step = 0; step < 32; step += 1) {
+    later(() => {
+      if (!state.phonkPlaying || token !== phonkPlaybackToken) return;
+      state.phonkEnsembleStatus = "playing";
+      const cycle = Math.floor(step / 8);
+      phonkStepSounds(step % 8, {
+        kick: true,
+        clap: cycle >= 1,
+        hihat: cycle >= 2,
+        cowbell: false,
+        bass808: false
+      });
+      updatePhonkEnsembleCue(cycle, step % 8);
+    }, 4 * beatMs + step * stepMs);
+  }
+  later(() => {
+    if (token !== phonkPlaybackToken) return;
+    state.phonkPlaying = false;
+    state.phonkEnsembleStatus = "idle";
+    state.phonkEnsembleCountdown = 4;
+    render();
+  }, 4 * beatMs + 32 * stepMs + 30);
+}
+
+function updatePhonkEnsembleCue(cycle, step) {
+  const entering = Math.min(cycle, 2);
+  const beat = Math.floor(step / 2);
+  const fullEnsemble = cycle === 3;
+  const guide = document.querySelector("[data-phonk-ensemble-guide]");
+  if (guide) guide.textContent = fullEnsemble ? "全体合奏" : `第 ${cycle + 1} 小节 · ${["Kick 进入", "Clap 进入", "Hi-Hat 进入"][cycle]}`;
+  document.querySelectorAll("[data-phonk-ensemble-row]").forEach((row, index) => {
+    const active = index <= entering;
+    row.classList.toggle("active", active);
+    row.classList.toggle("entering", !fullEnsemble && index === entering);
+    const status = row.querySelector("[data-phonk-ensemble-status]");
+    if (status) status.textContent = !active ? "准备" : fullEnsemble ? "一起演奏" : index === entering ? "现在进入" : "继续演奏";
+    row.querySelectorAll("[data-phonk-ensemble-beat]").forEach((cell, cellIndex) => {
+      cell.classList.toggle("current", active && cellIndex === beat);
+    });
+  });
+}
+
+function releasePhonkRecording(trackId) {
+  const recording = state.phonkRecordings[trackId];
+  if (recording?.audioUrl?.startsWith("blob:")) URL.revokeObjectURL(recording.audioUrl);
+  state.phonkRecordings[trackId] = null;
+}
+
+async function recordPhonkTrack() {
+  if (["countdown", "recording"].includes(state.phonkRecordStatus)) return;
+  if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) {
+    showToast("当前浏览器不支持录音，可以使用示范声音继续。");
+    return;
+  }
+  stopPhonkPlayback();
+  const track = PHONK_TRACKS[state.phonkRecordIndex];
+  if (!track) return;
+  try {
+    micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+    state.phonkRecordStatus = "countdown";
+    state.phonkCountdown = 4;
+    render();
+    const interval = 60000 / PHONK_BPM;
+    for (let beat = 0; beat < 4; beat += 1) {
+      later(() => {
+        state.phonkCountdown = 4 - beat;
+        drum(beat === 0 ? 0.75 : 0.4);
+        render();
+      }, beat * interval);
+    }
+    later(() => beginPhonkCapture(track.id), 4 * interval);
+  } catch {
+    stopMicrophone();
+    state.phonkRecordStatus = "idle";
+    render();
+    showToast("没有获得麦克风权限，可以使用示范声音继续。");
+  }
+}
+
+function beginPhonkCapture(trackId) {
+  if (!micStream) return;
+  releasePhonkRecording(trackId);
+  phonkRecordingCancelled = false;
+  const chunks = [];
+  mediaRecorder = new MediaRecorder(micStream);
+  mediaRecorder.addEventListener("dataavailable", event => { if (event.data.size) chunks.push(event.data); });
+  mediaRecorder.addEventListener("stop", () => {
+    if (phonkRecordingCancelled) {
+      phonkRecordingCancelled = false;
+      stopMicrophone();
+      return;
+    }
+    const blob = new Blob(chunks, { type: mediaRecorder.mimeType || "audio/webm" });
+    state.phonkRecordings[trackId] = { blob, audioUrl: URL.createObjectURL(blob) };
+    state.phonkRecordStatus = "ready";
+    stopMicrophone();
+    render();
+    showToast("录好了，可以先试听。 ");
+  }, { once: true });
+  mediaRecorder.start();
+  state.phonkRecordStatus = "recording";
+  render();
+  const duration = 2 * PHONK_BEATS_PER_BAR * 60000 / PHONK_BPM;
+  later(() => mediaRecorder?.state === "recording" && mediaRecorder.stop(), duration);
+}
+
+function previewPhonkRecording() {
+  const track = PHONK_TRACKS[state.phonkRecordIndex];
+  const recording = track && state.phonkRecordings[track.id];
+  if (!recording?.audioUrl) return;
+  stopPhonkRecordedAudio();
+  playPhonkRecordedTrack(track.id);
+}
+
+function acceptPhonkRecording() {
+  const track = PHONK_TRACKS[state.phonkRecordIndex];
+  if (!track || !state.phonkRecordings[track.id]) return;
+  if (state.phonkRecordIndex < PHONK_TRACKS.length - 1) {
+    state.phonkRecordIndex += 1;
+    state.phonkRecordStatus = state.phonkRecordings[PHONK_TRACKS[state.phonkRecordIndex].id] ? "ready" : "idle";
+    render();
+    return;
+  }
+  state.phonkRecordStatus = "idle";
+  state.phonkStep = 5;
+  render();
+}
+
+function resetPhonkLab() {
+  Object.keys(state.phonkRecordings).forEach(releasePhonkRecording);
+  state.phonkStep = 0;
+  state.phonkPracticePart = 0;
+  state.phonkPattern = structuredClone(PHONK_DEFAULT_PATTERN);
+  state.phonkSections = structuredClone(PHONK_DEFAULT_SECTIONS);
+  state.phonkSelectedSection = 0;
+  state.phonkRecordIndex = 0;
+  state.phonkRecordStatus = "idle";
+  state.phonkCountdown = 4;
+  state.phonkPerformanceMode = "practice";
+  state.phonkActiveSection = 0;
+  state.phonkCompleted = false;
+  stopPhonkPlayback();
+}
+
+function goBackPhonkLevel() {
+  clearTimers();
+  phonkPlaybackToken += 1;
+  state.phonkPlaying = false;
+  stopPhonkRecordedAudio();
+  if (mediaRecorder?.state === "recording" && state.phonkRecordStatus === "recording") {
+    phonkRecordingCancelled = true;
+    mediaRecorder.stop();
+  }
+  if (["countdown", "recording"].includes(state.phonkRecordStatus)) {
+    state.phonkRecordStatus = "idle";
+    stopMicrophone();
+  }
+  if (state.phonkStep === 1 && state.phonkPracticePart > 0) {
+    state.phonkPracticePart -= 1;
+    return render();
+  }
+  if (state.phonkStep > 0) {
+    state.phonkStep -= 1;
+    return render();
+  }
+  return setScreen("home");
 }
 
 function stopSolfegeNodes() {
@@ -724,6 +1169,10 @@ function showToast(message) {
 
 function setScreen(screen) {
   clearTimers();
+  phonkPlaybackToken += 1;
+  state.phonkPlaying = false;
+  stopPhonkRecordedAudio();
+  if (screen !== "mood") state.teacherMusicOpen = false;
   stopMusicAudio();
   stopSwanMelody({ reset: true });
   stopBodyPlayback();
@@ -779,6 +1228,7 @@ function render() {
   persistScoreSession();
   const views = {
     home: renderHome,
+    "phonk-lab": renderPhonkLab,
     teacher: renderTeacher,
     feel: renderFeelMenu,
     "feel-melody": renderFeelMelody,
@@ -808,6 +1258,7 @@ function render() {
   app.querySelector(".screen")?.classList.toggle("screen-arrive", shouldAnimateScreen);
   shouldAnimateScreen = false;
   bindEvents();
+  initializeGestureMotionDots();
 }
 
 function persistScoreSession() {
@@ -843,8 +1294,129 @@ function renderHome() {
       <div class="home-entry-grid">
         <button class="home-entry feel-entry" data-go="feel"><img class="entry-art" src="assets/stickers/home-feel.png" alt=""><strong>感受</strong><small>画旋律 · 身体演奏 · 唱唱名</small></button>
         <button class="home-entry create-entry" data-go="mood"><img class="entry-art" src="assets/stickers/home-create.png" alt=""><strong>创作</strong><small>贴纸编排我的音乐</small></button>
+        <button class="home-entry lab-entry" data-go="phonk-lab"><img class="entry-art" src="assets/stickers/home-lab.png" alt="小狮子在音乐制作台上创作节拍"><strong>音乐实验室</strong><small>玩节拍 · 做音乐 · 编排作品</small></button>
       </div>
     </section>`;
+}
+
+function phonkPageHeading(page, title) {
+  return `<div class="lab-page-heading"><span>${String(page).padStart(2, "0")} / 07</span><h2>${title}</h2></div>`;
+}
+
+function renderPhonkIntro() {
+  return `${topbar("Phonk Lab")}<section class="screen phonk-screen phonk-intro-screen">
+    <div class="phonk-hero-panel">
+      <img class="phonk-hero-lion" src="assets/stickers/home-lab.png" alt="穿着长裤的小狮子在音乐制作台前">
+      <div class="phonk-hero-copy">${phonkPageHeading(1, "PHONK")}
+        <div class="phonk-style-intro"><strong>PHONK 是什么？</strong><p>PHONK 是一种节拍很有力量的电子音乐。它常把鼓点、低沉的 808 和清亮的 Cowbell 放在一起，听起来有点神秘，也很有冲劲。</p></div>
+        <div class="lab-listen-cues" aria-label="音乐中的三种声音"><span><b>节拍</b>稳定向前</span><span><b>当当声</b>Cowbell</span><span><b>低沉重音</b>808</span></div>
+        <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back">返回上一级</button><button class="button secondary" data-action="phonk-listen-intro">${state.phonkPlaying ? "Ⅱ 停止" : "▶ 听一段 PHONK"}</button><button class="button primary" data-action="phonk-start">开始学习</button></div>
+      </div>
+    </div>
+  </section>`;
+}
+
+function renderPhonkBody() {
+  const track = PHONK_TRACKS[state.phonkPracticePart];
+  const isLast = state.phonkPracticePart === PHONK_TRACKS.length - 1;
+  const rhythmBeats = track.id === "clap"
+    ? ["空", "啪", "空", "啪", "空", "啪", "空", "啪"]
+    : Array.from({ length: 8 }, () => track.id === "hihat" ? "呲呲" : "咚");
+  return `${topbar("身体里的鼓")}<section class="screen phonk-screen">
+    ${phonkPageHeading(2, "身体里的鼓")}
+    <div class="lab-practice-card">
+      <img src="${track.image}" alt="穿着长裤的小狮子示范${track.action}">
+      <div><span class="lab-mini-progress">${state.phonkPracticePart + 1} / 3</span><h3>${track.label}（${track.cn}）</h3><p>${track.description}</p><strong>${track.sound} · ${track.action}</strong>${track.id === "hihat" ? "<small>使用密封塑料容器，请由老师确认瓶盖已经盖紧。</small>" : ""}</div>
+    </div>
+    <div class="lab-rhythm-line" aria-label="两小节练习节奏">${rhythmBeats.map((beat, index) => `${index === 4 ? "<i aria-hidden=\"true\"></i>" : ""}<span data-phonk-practice-beat="${index}">${beat}</span>`).join("")}</div>
+    <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back">返回上一级</button><button class="button secondary" data-action="phonk-practice-demo">▶ 播放示范</button><button class="button primary" data-action="${isLast ? "phonk-practice-finish" : "phonk-practice-next"}">${isLast ? "开始合奏" : "下一组"}</button></div>
+  </section>`;
+}
+
+function renderPhonkEnsemble() {
+  const ensembleTracks = [
+    { label: "Kick（底鼓）组", beats: ["咚", "咚", "咚", "咚"] },
+    { label: "Clap（拍手音）组", beats: ["空", "啪", "空", "啪"] },
+    { label: "Hi-Hat（踩镲）组", beats: ["呲呲", "呲呲", "呲呲", "呲呲"] }
+  ];
+  const countdown = [4, 3, 2, 1];
+  return `${topbar("节奏合奏")}<section class="screen phonk-screen">
+    ${phonkPageHeading(3, "节奏合奏")}
+    <div class="lab-ensemble-countdown ${state.phonkEnsembleStatus === "countdown" ? "counting" : ""}">
+      <strong data-phonk-ensemble-guide>${state.phonkEnsembleStatus === "countdown" ? "准备" : state.phonkEnsembleStatus === "playing" ? "跟着提示演奏" : "分组进入，最后合奏"}</strong>
+      <span>${countdown.map(number => `<i class="${state.phonkEnsembleStatus === "countdown" && state.phonkEnsembleCountdown === number ? "active" : ""}">${number}</i>`).join("<em>·</em>")}</span>
+    </div>
+    <div class="lab-ensemble-layout"><img src="assets/stickers/phonk-lion-arrange.png" alt="穿着长裤的小狮子指挥合奏"><div class="lab-ensemble-tracks">
+      ${ensembleTracks.map((track, rowIndex) => `<div data-phonk-ensemble-row="${rowIndex}"><div class="lab-ensemble-track-head"><b>${track.label}</b><small data-phonk-ensemble-status>准备</small></div><div class="lab-ensemble-beats">${track.beats.map((beat, beatIndex) => `<span data-phonk-ensemble-beat="${beatIndex}">${beat}</span>`).join("")}</div></div>`).join("")}
+    </div></div>
+    <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back">返回上一级</button><button class="button secondary" data-action="phonk-ensemble-demo">${state.phonkPlaying ? "Ⅱ 停止示范" : "▶ 播放分层示范"}</button><button class="button primary" data-action="phonk-ensemble-next">认识特征声音</button></div>
+  </section>`;
+}
+
+function renderPhonkSounds() {
+  return `${topbar("特征声音")}<section class="screen phonk-screen">
+    ${phonkPageHeading(4, "Cowbell 与 808")}
+    <div class="lab-sound-cards">
+      <button data-action="phonk-cowbell"><img src="assets/stickers/phonk-cowbell-instrument.png" alt="Cowbell 牛铃乐器和敲棒"><span><b>Cowbell（牛铃音色）</b>明亮的“当当声”，经常重复一小段旋律，是 PHONK 很容易被认出的声音。<strong>▶ 播放 Cowbell</strong></span></button>
+      <button data-action="phonk-808"><img src="assets/stickers/phonk-808-instrument.png" alt="产生 808 低音的电子鼓机和低音音箱"><span><b>808（电子低音）</b>来自鼓机的低音鼓，拉长以后像贝斯一样很低、很重，让音乐像在地面上震动。<strong>▶ 播放 808</strong></span></button>
+    </div>
+    <p class="lab-safety-note">Cowbell 可以用安全金属物轻轻探索；808 由浏览器播放。</p>
+    <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back">返回上一级</button><button class="button primary" data-action="phonk-sounds-next">进入录音工坊</button></div>
+  </section>`;
+}
+
+function renderPhonkRecorder() {
+  const track = PHONK_TRACKS[state.phonkRecordIndex];
+  const recording = state.phonkRecordings[track.id];
+  const status = state.phonkRecordStatus;
+  const statusText = status === "countdown" ? state.phonkCountdown : status === "recording" ? "录音中" : recording ? "录好了" : track.sound;
+  return `${topbar("录音工坊")}<section class="screen phonk-screen">
+    ${phonkPageHeading(5, "录音工坊")}
+    <div class="lab-recorder-layout"><img src="${track.image}" alt="穿着长裤的小狮子示范${track.action}"><div class="lab-recorder-main">
+      <div class="lab-record-progress">${PHONK_TRACKS.map((item, index) => `<span class="${state.phonkRecordings[item.id] ? "done" : index === state.phonkRecordIndex ? "current" : ""}">${index + 1}　${item.label}</span>`).join("")}</div>
+      <h3>录制 ${track.label}（${track.cn}）组</h3><p>倒数 4 拍后，跟随无声拍点演奏两小节。</p>
+      <div class="lab-record-orb ${status}">${statusText}</div>
+      <div class="phonk-actions">${status === "idle" ? `<button class="button primary" data-action="phonk-record-start">开始录音</button>` : ""}${status === "ready" ? `<button class="button secondary" data-action="phonk-record-preview">▶ 试听</button><button class="button secondary" data-action="phonk-record-retake">重新录制</button><button class="button primary" data-action="phonk-record-accept">${state.phonkRecordIndex === 2 ? "进入编排" : "保留并录下一组"}</button>` : ""}</div>
+    </div></div>
+    <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back" ${["countdown", "recording"].includes(status) ? "disabled" : ""}>返回上一级</button>${status === "idle" && !recording ? `<button class="button ghost lab-skip-record" data-action="phonk-record-skip">使用示范声音继续</button>` : ""}</div>
+  </section>`;
+}
+
+function renderPhonkArrangement() {
+  const section = state.phonkSections[state.phonkSelectedSection];
+  const ranges = ["第 1–4 小节", "第 5–8 小节", "第 9–16 小节", "第 17–20 小节", "第 21–24 小节"];
+  const tracks = [["kick", "Kick"], ["clap", "Clap"], ["hihat", "Hi-Hat"], ["cowbell", "Cowbell"], ["bass808", "808"]];
+  return `${topbar("编排歌曲")}<section class="screen phonk-screen">
+    ${phonkPageHeading(6, "编排一首 PHONK")}
+    <div class="lab-arrange-top"><img src="assets/stickers/phonk-lion-arrange.png" alt="穿着长裤的小狮子在制作台上编排歌曲"><div><strong>24 小节 · 约 46 秒</strong><p>选择段落，再决定这一段出现哪些声音。</p></div></div>
+    <div class="lab-section-tabs">${state.phonkSections.map((item, index) => `<button class="${index === state.phonkSelectedSection ? "active" : ""}" data-phonk-section="${index}"><b>${item.label}</b><span>${item.bars} 小节</span></button>`).join("")}</div>
+    <div class="lab-track-picker"><div><h3>${section.label}</h3><span>${ranges[state.phonkSelectedSection]}</span></div><p><b>声音轨道</b>就是一条独立的声音。</p><div>${tracks.map(([key, label]) => `<button class="${section.layers[key] ? "active" : ""}" data-phonk-track="${state.phonkSelectedSection}:${key}">${section.layers[key] ? "✓" : "○"} ${label}</button>`).join("")}</div></div>
+    <div class="phonk-actions"><button class="button ghost" data-action="phonk-page-back">返回上一级</button><button class="button secondary" data-action="phonk-arrangement-preview">${state.phonkPlaying ? "Ⅱ 停止试听" : "▶ 试听这一段"}</button><button class="button primary" data-action="phonk-arrangement-next">保存并进入演出</button></div>
+  </section>`;
+}
+
+function renderPhonkPerformance() {
+  const section = state.phonkSections[state.phonkActiveSection] || state.phonkSections[0];
+  return `${topbar("全班演出")}<section class="screen phonk-screen phonk-performance-screen">
+    ${phonkPageHeading(7, "全班演出")}
+    <div class="lab-performance-layout"><img src="assets/stickers/phonk-lion-celebrate.png" alt="穿着长裤的小狮子指挥全班演出"><div>
+      <div class="lab-mode-switch"><button class="${state.phonkPerformanceMode === "practice" ? "active" : ""}" data-phonk-mode="practice">练习模式</button><button class="${state.phonkPerformanceMode === "show" ? "active" : ""}" data-phonk-mode="show">演出模式</button></div>
+      <div class="lab-now-playing"><span>${state.phonkCompleted ? "演出完成" : state.phonkPlaying ? "正在播放" : "准备开始"}</span><h3>${section.label}</h3><p>${state.phonkPerformanceMode === "practice" ? "选择一个段落反复练习，老师可以随时暂停或重来。" : "歌曲将从头到尾连续播放。"}</p></div>
+      <div class="lab-work-progress">${state.phonkSections.map((item, index) => state.phonkPerformanceMode === "practice" ? `<button class="${index === state.phonkActiveSection ? "active" : ""}" data-phonk-performance-section="${index}">${item.label}</button>` : `<span class="${index === state.phonkActiveSection ? "active" : ""}">${item.label}</span>`).join("")}</div>
+      <div class="phonk-actions"><button class="button primary" data-action="phonk-performance-play">${state.phonkPlaying ? "Ⅱ 暂停" : "▶ 开始"}</button><button class="button secondary" data-action="phonk-performance-restart">重新开始</button></div>
+    </div></div>
+    <button class="button ghost" data-action="phonk-page-back">返回上一级</button>
+  </section>`;
+}
+
+function renderPhonkLab() {
+  if (state.phonkStep === 0) return renderPhonkIntro();
+  if (state.phonkStep === 1) return renderPhonkBody();
+  if (state.phonkStep === 2) return renderPhonkEnsemble();
+  if (state.phonkStep === 3) return renderPhonkSounds();
+  if (state.phonkStep === 4) return renderPhonkRecorder();
+  if (state.phonkStep === 5) return renderPhonkArrangement();
+  return renderPhonkPerformance();
 }
 
 function renderTeacherHub() {
@@ -1277,7 +1849,7 @@ function swanGestureCardsMarkup(group) {
     const barLabel = group.mode === "merged" ? formatBarRange(group.bars) : `第 ${group.bars[index]} 小节`;
     const gesture = gestureById(gestureId);
     const restClass = gesture.kind === "rest" ? " rest-gesture" : "";
-    return `<div class="swan-measure-gesture${restClass}" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+    return `<div class="swan-measure-gesture${restClass}" data-class-gesture="${index}"><span>${barLabel}</span>${gestureMotionMarkup(gestureId, `swan-main-gesture ${state.classPlaying ? "playing" : ""}`)}<p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
   }).join("");
 }
 
@@ -1330,8 +1902,8 @@ function renderFeelMelody() {
   const gestureCards = group.gestureIds.map((gestureId, index) => {
     const barLabel = group.mode === "merged" ? formatBarRange(group.bars) : `第 ${group.bars[index]} 小节`;
     const gesture = gestureById(gestureId);
-    if (gesture.kind === "rest") return `<div class="swan-measure-gesture rest-gesture" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
-    return `<div class="swan-measure-gesture" data-class-gesture="${index}"><span>${barLabel}</span><img class="swan-main-gesture ${state.classPlaying ? "playing" : ""}" src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+    if (gesture.kind === "rest") return `<div class="swan-measure-gesture rest-gesture" data-class-gesture="${index}"><span>${barLabel}</span>${gestureMotionMarkup(gestureId, `swan-main-gesture ${state.classPlaying ? "playing" : ""}`)}<p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
+    return `<div class="swan-measure-gesture" data-class-gesture="${index}"><span>${barLabel}</span>${gestureMotionMarkup(gestureId, `swan-main-gesture ${state.classPlaying ? "playing" : ""}`)}<p>${gesture.label}</p>${gestureBeatGuide(group, index, state.publishedLessonMeter)}<div class="swan-gesture-time"><i></i></div></div>`;
   }).join("");
   return `${topbar("画旋律")}<section class="screen feel-feature-screen">
     <div class="feel-feature-heading">${avatarMarkup("cat", "feel-feature-animal melody-gesture-cat")}<div><p class="eyebrow">${escapeHtml(state.publishedLessonTitle)}</p><h2>跟着手势感受旋律</h2></div></div>
@@ -1340,7 +1912,7 @@ function renderFeelMelody() {
       <div class="swan-measure-stage"><div class="swan-measure-grid mode-${group.mode} is-active" aria-hidden="false">${gestureCards}</div><div class="swan-measure-grid" aria-hidden="true"></div></div>
       ${renderSwanWindowProgress(analysis, state.swanSection)}
     </div>
-    <button class="button primary feel-play-button" data-action="play-swan-melody">${state.classPlaying ? "Ⅱ 暂停" : state.swanProgress >= 1 ? "↻ 再演一次" : "▶ 开始跟着演"}</button>
+    <button class="button primary feel-play-button" data-action="play-swan-melody">${state.classPlaying ? "Ⅱ 暂停" : state.swanPausedAt !== null ? "▶ 继续跟着演" : state.swanProgress >= 1 ? "↻ 再演一次" : "▶ 开始跟着演"}</button>
   </section>`;
 }
 
@@ -1558,16 +2130,16 @@ function renderMood() {
     <button class="mood-card ${mood.className} ${state.mood === key ? "selected" : ""}" data-mood="${key}" aria-pressed="${state.mood === key}">
       <span class="emoji">${mood.emoji}</span><strong>${mood.name}</strong><small>${mood.hint}</small>
     </button>`).join("");
-  const teacherCards = state.teacherMusicPacks.map(pack => `<button class="teacher-music-card" data-teacher-pack="${escapeHtml(pack.packId)}">
+  const customPack = state.teacherMusicPacks.find(pack => pack.title === "雨后晴天蹦蹦跳") || state.teacherMusicPacks[0];
+  const teacherCard = customPack ? `<button class="teacher-music-card" data-teacher-pack="${escapeHtml(customPack.packId)}">
     <span class="teacher-music-icon" aria-hidden="true">✦</span>
-    <span><small>老师制作 · 已配好律动</small><strong>${escapeHtml(pack.title)}</strong><b>${escapeHtml(pack.moodSummary)} · ${escapeHtml(pack.grooveSummary)} · ${pack.bpm} BPM</b></span>
+    <span><strong>雨后晴天蹦蹦跳</strong><b>${escapeHtml(customPack.moodSummary)} · ${escapeHtml(customPack.grooveSummary)} · ${customPack.bpm} BPM</b></span>
     <i>直接创作 →</i>
-  </button>`).join("");
-  const teacherSection = state.teacherMusicLoading
-    ? `<section class="teacher-music-section"><div class="teacher-music-heading"><h3>老师准备的音乐</h3><p>正在读取老师发布的音乐……</p></div></section>`
-    : teacherCards
-      ? `<section class="teacher-music-section"><div class="teacher-music-heading"><h3>老师准备的音乐</h3><p>这些音乐已经配好感觉和律动，可以直接进入歌曲编排。</p></div><div class="teacher-music-list">${teacherCards}</div></section>`
-      : "";
+  </button>` : "";
+  const teacherSection = `<section class="teacher-music-section ${state.teacherMusicOpen ? "is-open" : ""}">
+    <button class="teacher-music-toggle" data-action="toggle-teacher-music" aria-expanded="${state.teacherMusicOpen}"><span>自定义旋律</span><b>${state.teacherMusicOpen ? "收起" : "展开"}⌄</b></button>
+    ${state.teacherMusicOpen ? `<div class="teacher-music-dropdown">${state.teacherMusicLoading ? `<p class="teacher-music-loading">正在读取旋律……</p>` : teacherCard || `<p class="teacher-music-loading">暂时没有可用旋律。</p>`}</div>` : ""}
+  </section>`;
   return `${topbar("创作 · 选择感觉")}<section class="screen">
     <div class="hero"><p class="eyebrow">第一张贴纸</p><h2>选择一种感觉</h2><p class="lead">它会决定音乐的旋律材料和画面氛围。</p></div>
     <div class="mood-grid">${cards}</div>
@@ -1797,12 +2369,12 @@ function renderCollaborationMelody() {
   }).join("");
   const gestureChoices = gestureLibrary
     .filter(item => item.scope === "universal" || item.scope === "4/4")
-    .map(item => `<button class="collab-gesture-choice ${item.id === gesture.id ? "active" : ""}" data-collab-gesture-choice="${item.id}"><img src="${item.image}" alt="${item.name}"><span>${item.name}</span></button>`)
+    .map(item => `<button class="collab-gesture-choice ${item.id === gesture.id ? "active" : ""}" data-collab-gesture-choice="${item.id}" data-collab-gesture-index="${index}"><img src="${item.image}" alt="${item.name}"><span>${item.name}</span></button>`)
     .join("");
   return `${topbar("合作表演 · 旋律指挥家")}<section class="screen collab-practice-screen role-melody-theme">
-    <div class="collab-practice-heading"><img src="assets/stickers/performer-cat-gesture.png" alt="小猫"><div><h2>一小节一张卡，跟着小猫画旋律</h2></div></div>
+    <div class="collab-practice-heading"><img src="assets/stickers/performer-cat-gesture.png" alt="小猫"><div><h2>跟着小猫画旋律</h2></div></div>
     <div class="collab-practice-card melody-collab-card">
-      <div class="active-gesture-card"><span>第 ${index + 1} 小节 · ${gesture.name}</span><img src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p><button class="button ghost gesture-change-button" data-action="toggle-collab-gesture-picker">${state.collaborationGesturePickerOpen ? "收起手势" : "换一个手势"}</button></div>
+      <div class="active-gesture-card"><span>第 ${index + 1} 小节 · ${gesture.name}</span><img src="${gesture.image}" alt="${gesture.label}"><p>${gesture.label}</p><button class="button ghost gesture-change-button" data-action="toggle-collab-gesture-picker">${state.collaborationGesturePickerOpen ? "收起手势" : fullMixPlaying ? "停止播放并更换手势" : "换一个手势"}</button></div>
       ${state.collaborationGesturePickerOpen ? `<div class="collab-gesture-picker"><strong>为第 ${index + 1} 小节选择手势</strong><div>${gestureChoices}</div><p>点一下就会自动保存</p></div>` : ""}
       <div class="collab-gesture-strip">${thumbnails}</div>
       <div class="collab-practice-actions"><button class="button secondary" data-action="previous-collab-gesture" ${index === 0 ? "disabled" : ""}>← 上一小节</button><button class="button primary" data-action="${fullMixPlaying ? "stop-poetry-preview" : "preview-collab-full-mix"}">${fullMixPlaying ? "暂停完整作品" : "跟音乐画一遍"}</button><button class="button secondary" data-action="next-collab-gesture" ${index === gestureIds.length - 1 ? "disabled" : ""}>下一小节 →</button></div>
@@ -1919,6 +2491,28 @@ function renderModal() {
 
 function bindEvents() {
   app.querySelectorAll("[data-go]").forEach(button => button.addEventListener("click", () => setScreen(button.dataset.go)));
+  app.querySelectorAll("[data-phonk-section]").forEach(button => button.addEventListener("click", () => {
+    stopPhonkPlayback();
+    state.phonkSelectedSection = Number(button.dataset.phonkSection);
+    render();
+  }));
+  app.querySelectorAll("[data-phonk-track]").forEach(button => button.addEventListener("click", () => {
+    const [sectionIndex, key] = button.dataset.phonkTrack.split(":");
+    const layers = state.phonkSections[Number(sectionIndex)]?.layers;
+    if (layers && Object.hasOwn(layers, key)) layers[key] = !layers[key];
+    render();
+  }));
+  app.querySelectorAll("[data-phonk-mode]").forEach(button => button.addEventListener("click", () => {
+    stopPhonkPlayback();
+    state.phonkPerformanceMode = button.dataset.phonkMode;
+    state.phonkActiveSection = 0;
+    render();
+  }));
+  app.querySelectorAll("[data-phonk-performance-section]").forEach(button => button.addEventListener("click", () => {
+    stopPhonkPlayback();
+    state.phonkActiveSection = Number(button.dataset.phonkPerformanceSection);
+    render();
+  }));
   app.querySelectorAll("[data-mood]").forEach(button => button.addEventListener("click", () => selectMood(button.dataset.mood)));
   app.querySelectorAll("[data-teacher-pack]").forEach(button => button.addEventListener("click", () => selectTeacherMusicPack(button.dataset.teacherPack)));
   app.querySelectorAll("[data-groove]").forEach(button => button.addEventListener("click", () => selectGroove(button.dataset.groove)));
@@ -1953,8 +2547,10 @@ function bindEvents() {
   app.querySelectorAll("[data-collab-gesture]").forEach(button => button.addEventListener("click", () => {
     playCollaborationFromBar(Number(button.dataset.collabGesture));
   }));
-  app.querySelectorAll("[data-collab-gesture-choice]").forEach(button => button.addEventListener("click", () => {
-    saveCollaborationGesture(state.collaborationGestureIndex, button.dataset.collabGestureChoice);
+  app.querySelectorAll("[data-collab-gesture-choice]").forEach(button => button.addEventListener("click", event => {
+    event.preventDefault();
+    event.stopPropagation();
+    saveCollaborationGesture(Number(button.dataset.collabGestureIndex), button.dataset.collabGestureChoice);
   }));
   app.querySelectorAll("[data-speed]").forEach(button => button.addEventListener("click", () => { state.playbackRate = Number(button.dataset.speed); if (state.classPlaying) playClassSong(); else render(); }));
   const solfegeSpeed = app.querySelector("[data-solfege-speed]");
@@ -2245,20 +2841,30 @@ function locateTeacherGroup(groupIndex) {
 
 async function playSwanMelody() {
   if (state.classPlaying) {
-    stopSwanMelody();
+    const pausedAt = activeSwanAudio?.currentTime;
+    cancelAnimationFrame(activeSwanFrame);
+    activeSwanFrame = null;
+    activeSwanAudio?.pause();
+    activeSwanAudio = null;
+    state.swanPausedAt = Number.isFinite(pausedAt) ? pausedAt : null;
+    state.classPlaying = false;
     render();
+    if (state.swanPausedAt !== null) updateClassGestureMarker(state.swanPausedAt);
     return;
   }
   await preloadSwanGestureImages();
   const lessonStart = state.publishedLessonStart || 0;
   const lessonEnd = state.publishedLessonEnd || CARMEN_EXCERPT_SECONDS;
   const lessonDuration = Math.max(0.1, lessonEnd - lessonStart);
+  const resumeAt = state.swanPausedAt !== null ? clamp(state.swanPausedAt, lessonStart, lessonEnd) : lessonStart;
   // The audio element reports 0 briefly before it has sought to lessonStart.
   // Keep the first gesture visible during that short setup period.
-  state.swanSection = Math.max(0, state.publishedTeacherAnalysis.findIndex(group => lessonStart >= group.start && lessonStart < group.end));
-  state.swanProgress = 0;
+  state.swanSection = Math.max(0, state.publishedTeacherAnalysis.findIndex(group => resumeAt >= group.start && resumeAt < group.end));
+  state.swanProgress = clamp((resumeAt - lessonStart) / lessonDuration);
+  state.swanPausedAt = null;
   state.classPlaying = true;
   render();
+  updateClassGestureMarker(resumeAt);
 
   activeSwanAudio = new Audio(state.publishedLessonAudioUrl || CARMEN_AUDIO);
   activeSwanAudio.preload = "auto";
@@ -2287,7 +2893,7 @@ async function playSwanMelody() {
   };
   const begin = () => {
     if (!activeSwanAudio) return;
-    activeSwanAudio.currentTime = lessonStart;
+    activeSwanAudio.currentTime = resumeAt;
     activeSwanAudio.play().then(() => {
       activeSwanFrame = requestAnimationFrame(animate);
     }).catch(() => {
@@ -2311,8 +2917,91 @@ function updateClassGestureMarker(currentTime) {
     card.classList.toggle("current-gesture", isCurrent);
     const localProgress = clamp((currentTime - timing.start) / Math.max(0.01, timing.end - timing.start));
     card.style.setProperty("--swan-gesture-progress", isCurrent ? `${localProgress * 100}%` : activeSlot > slotIndex ? "100%" : "0%");
+    updateGestureMotion(card, timing, currentTime, isCurrent && state.classPlaying);
     updateGestureBeatGuide(card, timing, currentTime, isCurrent && state.classPlaying);
   });
+}
+
+function gesturePathLandmarks(gestureId, path) {
+  const motion = GESTURE_MOTION_PATHS[gestureId] || GESTURE_MOTION_PATHS.hold;
+  if (!motion.points?.length || !path || typeof path.getTotalLength !== "function") {
+    return motion.landmarks || [0, 1];
+  }
+  if (path._gestureLandmarkFractions) return path._gestureLandmarkFractions;
+  const totalLength = path.getTotalLength();
+  const sampleCount = 720;
+  const fractions = motion.points.map(([targetX, targetY]) => {
+    let nearestLength = 0;
+    let nearestDistance = Infinity;
+    for (let sample = 0; sample <= sampleCount; sample += 1) {
+      const length = totalLength * sample / sampleCount;
+      const point = path.getPointAtLength(length);
+      const distance = (point.x - targetX) ** 2 + (point.y - targetY) ** 2;
+      if (distance < nearestDistance) {
+        nearestDistance = distance;
+        nearestLength = length;
+      }
+    }
+    return nearestLength / Math.max(1, totalLength);
+  });
+  fractions[0] = 0;
+  fractions[fractions.length - 1] = 1;
+  for (let index = 1; index < fractions.length; index += 1) {
+    fractions[index] = Math.max(fractions[index - 1], fractions[index]);
+  }
+  path._gestureLandmarkFractions = fractions;
+  return fractions;
+}
+
+function gestureMotionStops(gestureId, beatCount, path) {
+  const landmarks = gesturePathLandmarks(gestureId, path);
+  const count = Math.max(1, beatCount);
+  return Array.from({ length: count + 1 }, (_, index) => {
+    const position = index * (landmarks.length - 1) / count;
+    const lower = Math.floor(position);
+    const upper = Math.min(landmarks.length - 1, Math.ceil(position));
+    const fraction = position - lower;
+    return landmarks[lower] + (landmarks[upper] - landmarks[lower]) * fraction;
+  });
+}
+
+function gestureMotionProgress(gestureId, timing, currentTime, path) {
+  const beatStarts = (timing.beatTimes || []).filter(time => time > timing.start && time < timing.end);
+  const boundaries = [timing.start, ...beatStarts, timing.end];
+  const stops = gestureMotionStops(gestureId, boundaries.length - 1, path);
+  const time = clamp(currentTime, timing.start, timing.end);
+  let segment = boundaries.length - 2;
+  for (let index = 0; index < boundaries.length - 1; index += 1) {
+    if (time <= boundaries[index + 1]) { segment = index; break; }
+  }
+  const duration = Math.max(.001, boundaries[segment + 1] - boundaries[segment]);
+  const local = clamp((time - boundaries[segment]) / duration);
+  return stops[segment] + (stops[segment + 1] - stops[segment]) * local;
+}
+
+function setGestureMotionDot(svg, progress, visible) {
+  const path = svg?.querySelector("[data-gesture-motion-path]");
+  if (!path || typeof path.getTotalLength !== "function") return;
+  const point = path.getPointAtLength(path.getTotalLength() * clamp(progress));
+  svg.querySelectorAll("[data-gesture-motion-dot]").forEach(dot => {
+    dot.setAttribute("cx", point.x);
+    dot.setAttribute("cy", point.y);
+  });
+  svg.classList.toggle("motion-active", visible);
+  svg.classList.add("motion-ready");
+}
+
+function initializeGestureMotionDots() {
+  app.querySelectorAll("[data-gesture-motion]").forEach(svg => setGestureMotionDot(svg, 0, false));
+}
+
+function updateGestureMotion(card, timing, currentTime, visible) {
+  const svg = card.querySelector("[data-gesture-motion]");
+  if (!svg) return;
+  const path = svg.querySelector("[data-gesture-motion-path]");
+  const gestureId = svg.dataset.gestureMotion;
+  const progress = gestureMotionProgress(gestureId, timing, currentTime, path);
+  setGestureMotionDot(svg, progress, visible);
 }
 
 function average(values) {
@@ -3634,9 +4323,21 @@ function playCollaborationBody(mode) {
   playBodyLesson(mode);
 }
 
-function changeCollaborationGesture(direction) {
+function stopCollaborationPlayback() {
+  clearTimers();
   stopMusicAudio();
+  stopPoemAudio();
+  stopBodyPlayback();
+  activeVoiceAudios.forEach(audio => audio.pause());
+  activeVoiceAudios = [];
+  state.playingSection = null;
+  state.poetryPreviewMode = null;
   state.classPlaying = false;
+  state.collaborationCountdown = null;
+}
+
+function changeCollaborationGesture(direction) {
+  stopCollaborationPlayback();
   const gestureIds = state.collaborationGestureIds || JINGYESI_GESTURE_IDS;
   state.collaborationGestureIndex = Math.max(0, Math.min(gestureIds.length - 1, state.collaborationGestureIndex + direction));
   state.collaborationGesturePickerOpen = false;
@@ -3645,6 +4346,7 @@ function changeCollaborationGesture(direction) {
 
 function saveCollaborationGesture(index, gestureId) {
   if (!gestureById(gestureId)) return;
+  stopCollaborationPlayback();
   const gestureIds = [...(state.collaborationGestureIds || JINGYESI_GESTURE_IDS)];
   gestureIds[index] = gestureId;
   state.collaborationGestureIds = gestureIds;
@@ -3695,10 +4397,9 @@ function schedulePoemLineClips(startBar) {
 }
 
 function playCollaborationOnce({ markComplete = false, startBar = 0 } = {}) {
-  clearTimers();
-  stopMusicAudio();
-  stopPoemAudio();
-  stopBodyPlayback();
+  const playbackMode = state.poetryPreviewMode || "mix";
+  stopCollaborationPlayback();
+  state.poetryPreviewMode = playbackMode;
   startBar = Math.max(0, Math.min(7, Number(startBar) || 0));
   state.collaborationDone = false;
   state.collaborationBar = startBar;
@@ -3771,6 +4472,12 @@ function playCollaborationFromBar(bar) {
   state.poetryPreviewMode = "mix";
   state.collaborationGesturePickerOpen = false;
   playCollaborationOnce({ markComplete: false, startBar: bar });
+}
+
+function toggleCollaborationGesturePicker() {
+  if (state.playingSection !== null || state.poetryPreviewMode === "mix") stopCollaborationPlayback();
+  state.collaborationGesturePickerOpen = !state.collaborationGesturePickerOpen;
+  render();
 }
 
 function previewCollaborationFullMix() {
@@ -3850,6 +4557,26 @@ function handleAction(action, button, event) {
     back: goBack,
     library: () => setScreen("library"),
     "play-class-song": playClassSong,
+    "phonk-listen-intro": () => previewPhonkSection(2),
+    "phonk-start": () => { state.phonkStep = 1; render(); },
+    "phonk-page-back": goBackPhonkLevel,
+    "phonk-practice-demo": previewPhonkPractice,
+    "phonk-practice-next": () => { state.phonkPracticePart = Math.min(PHONK_TRACKS.length - 1, state.phonkPracticePart + 1); render(); },
+    "phonk-practice-finish": () => { state.phonkStep = 2; render(); },
+    "phonk-ensemble-demo": previewPhonkEnsemble,
+    "phonk-ensemble-next": () => { stopPhonkPlayback(); state.phonkStep = 3; render(); },
+    "phonk-cowbell": () => previewPhonkCharacteristic("cowbell"),
+    "phonk-808": () => previewPhonkCharacteristic("808"),
+    "phonk-sounds-next": () => { state.phonkStep = 4; render(); },
+    "phonk-record-start": recordPhonkTrack,
+    "phonk-record-preview": previewPhonkRecording,
+    "phonk-record-retake": () => { const track = PHONK_TRACKS[state.phonkRecordIndex]; if (track) releasePhonkRecording(track.id); state.phonkRecordStatus = "idle"; render(); },
+    "phonk-record-accept": acceptPhonkRecording,
+    "phonk-record-skip": () => { state.phonkRecordStatus = "idle"; state.phonkStep = 5; render(); },
+    "phonk-arrangement-preview": () => previewPhonkSection(state.phonkSelectedSection),
+    "phonk-arrangement-next": () => { stopPhonkPlayback(); state.phonkStep = 6; state.phonkActiveSection = 0; render(); },
+    "phonk-performance-play": () => state.phonkPlaying ? stopPhonkPlayback() : state.phonkPerformanceMode === "practice" ? previewPhonkSection(state.phonkActiveSection) : playPhonkWork(),
+    "phonk-performance-restart": () => { stopPhonkPlayback(); state.phonkActiveSection = 0; state.phonkCompleted = false; render(); },
     "previous-solfege-phrase": () => changeSolfegePhrase(-1),
     "next-solfege-phrase": () => changeSolfegePhrase(1),
     "play-solfege-section": () => chooseSolfegePlayback(false),
@@ -3894,6 +4621,7 @@ function handleAction(action, button, event) {
     "reopen-teacher-review": () => { state.teacherStep = "review"; state.teacherPublished = false; render(); },
     "close-gesture-picker": () => { state.teacherEditing = null; render(); },
     "preview-pack": previewPack,
+    "toggle-teacher-music": () => { state.teacherMusicOpen = !state.teacherMusicOpen; render(); },
     "toggle-class-play": toggleClassPlayback,
     "open-voice-recorder": () => {
       if (state.voiceStickers.length >= MAX_VOICE_STICKERS) return showToast(`每件作品最多录制 ${MAX_VOICE_STICKERS} 张声音贴纸。`);
@@ -3925,7 +4653,7 @@ function handleAction(action, button, event) {
     "previous-collab-gesture": () => changeCollaborationGesture(-1),
     "next-collab-gesture": () => changeCollaborationGesture(1),
     "preview-collab-full-mix": previewCollaborationFullMix,
-    "toggle-collab-gesture-picker": () => { state.collaborationGesturePickerOpen = !state.collaborationGesturePickerOpen; render(); },
+    "toggle-collab-gesture-picker": toggleCollaborationGesturePicker,
     "complete-collab-role": () => completeCollaborationRole(button.dataset.role),
     "start-collaboration-performance": startCollaborationPerformance,
     "stop-collaboration": stopCollaborationPerformance,
@@ -3942,6 +4670,7 @@ function handleAction(action, button, event) {
 }
 
 function goBack() {
+  if (state.screen === "phonk-lab") return goBackPhonkLevel();
   if (state.screen === "teacher" && state.teacherMode !== "hub") {
     state.teacherMode = "hub";
     shouldAnimateScreen = true;

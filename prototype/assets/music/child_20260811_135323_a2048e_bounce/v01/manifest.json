@@ -1,0 +1,55 @@
+{
+  "schemaVersion": 1,
+  "packId": "child_20260811_135323_a2048e_bounce",
+  "sourceKitId": "child_20260811_135323_a2048e_bounce_v01",
+  "version": "v01",
+  "feeling": "child_20260811_135323_a2048e",
+  "groove": "bounce",
+  "title": "雨后晴天蹦蹦跳",
+  "moodSummary": "夏天，下完雨后天晴了我很高兴",
+  "grooveSummary": "蹦蹦跳跳回家",
+  "bpm": 112,
+  "timeSignature": "4/4",
+  "bars": 2,
+  "durationSeconds": 4.285708,
+  "loop": {
+    "enabled": true,
+    "startFrame": 0,
+    "endFrame": 205714
+  },
+  "audio": {
+    "format": "wav",
+    "encoding": "pcm_s16le",
+    "sampleRate": 48000,
+    "channels": 2,
+    "bitDepth": 16,
+    "frames": 205714
+  },
+  "stems": {
+    "bear": "stems/bear.wav",
+    "cat": "stems/cat.wav",
+    "dog": "stems/dog.wav",
+    "lion": "stems/lion.wav"
+  },
+  "stemRoles": {
+    "bear": "keyboard_and_melody",
+    "cat": "bass",
+    "dog": "drums",
+    "lion": "alto_sax_response"
+  },
+  "stemGains": {
+    "bear": 1.0,
+    "cat": 1.0,
+    "dog": 1.0,
+    "lion": 1.0
+  },
+  "checksums": {
+    "bear": "2db291c0b925d2fa3ec00f526f89234ccbc1ba6224e49291785e090e44499434",
+    "cat": "e03cb96e151007612c615edc9c28a86cb245e5eabfb784943f0e69b43088bb82",
+    "dog": "2b649c465e0efcc8dead43091e34b471821ab9c1e4d9b8316d7099ca6527a310",
+    "lion": "c3ed418dafa828997253f6b67c70a69723986dab4ec48d2cd22a500619350a09"
+  },
+  "mixPreview": "preview/mix.wav",
+  "score": "score.json",
+  "publishedAt": "2026-08-11T13:58:05"
+}

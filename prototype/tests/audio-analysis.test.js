@@ -48,14 +48,15 @@ if (appElement.innerHTML.includes("工作台已经整合到备课平台")) throw
 context.__analysisState.teacherMode = "analysis";
 context.__analysisState.screen = "mood";
 context.__analysisState.teacherMusicLoading = false;
-context.__analysisState.teacherMusicPacks = [{ packId: "teacher-rain", version: "v01", title: "雨后的秋千", moodSummary: "温柔想念", grooveSummary: "轻轻摇摆", bpm: 80 }];
+context.__analysisState.teacherMusicOpen = true;
+context.__analysisState.teacherMusicPacks = [{ packId: "teacher-rain", version: "v01", title: "雨后晴天蹦蹦跳", moodSummary: "夏天，下完雨后天晴了我很高兴", grooveSummary: "蹦蹦跳跳回家", bpm: 112 }];
 context.__render();
-if (!appElement.innerHTML.includes("老师准备的音乐") || !appElement.innerHTML.includes("雨后的秋千") || !appElement.innerHTML.includes("直接创作")) throw new Error("老师自定义音乐没有出现在选择感觉页");
+if (!appElement.innerHTML.includes("自定义旋律") || !appElement.innerHTML.includes("雨后晴天蹦蹦跳") || !appElement.innerHTML.includes("直接创作")) throw new Error("老师自定义音乐没有出现在选择感觉页");
 context.__analysisState.screen = "arrange";
 context.__analysisState.musicSource = "teacher";
 context.__analysisState.selectedTeacherPack = context.__analysisState.teacherMusicPacks[0];
 context.__render();
-if (!appElement.innerHTML.includes("声音贴纸盒") || !appElement.innerHTML.includes("录制声音贴纸") || !appElement.innerHTML.includes("80 BPM")) throw new Error("编排页没有接入按当前速度录制声音贴纸的入口");
+if (!appElement.innerHTML.includes("声音贴纸盒") || !appElement.innerHTML.includes("录制声音贴纸") || !appElement.innerHTML.includes("112 BPM")) throw new Error("编排页没有接入按当前速度录制声音贴纸的入口");
 if (context.__musicPath("stems/dog.wav") !== "/children-music-studio/frontend-music/teacher-rain/v01/stems/dog.wav") throw new Error("老师音乐没有读取已发布的正式分轨");
 context.__analysisState.voice = { status: "ready", audioUrl: "blob:voice-one", blob: {} };
 context.__saveVoiceSticker();

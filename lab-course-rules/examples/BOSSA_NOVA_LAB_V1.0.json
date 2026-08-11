@@ -1,0 +1,410 @@
+{
+  "schemaVersion": "1.0-draft",
+  "lessonId": "bossa-nova-style-v1",
+  "status": "review_required",
+  "source": {
+    "type": "style",
+    "name": "Bossa Nova",
+    "artist": null,
+    "audioProvided": false,
+    "analysisConfidence": "typical_style",
+    "references": [
+      "https://folkways.si.edu/luiz-bonfa-brazilian-bossa-nova-guitarist/latin-world/music/article/smithsonian",
+      "https://hub.yamaha.com/keyboards/k-how-to/exploring-latin-rhythms/",
+      "https://www.yamaha.com/en/musical_instrument_guide/drums/play/play003.html"
+    ]
+  },
+  "classProfile": {
+    "grade": "5-6",
+    "durationMinutes": 40,
+    "studentCount": 36,
+    "groupCount": 3,
+    "recordingEnabled": true,
+    "targetWorkSeconds": 50
+  },
+  "musicAnalysis": {
+    "childSummary": "Bossa Nova 来自巴西。它把桑巴的节奏放轻，再配上温暖的吉他和爵士和弦，听起来像一边散步一边轻轻摇摆。",
+    "bpm": 116,
+    "bpmMeaning": "这是课堂练习速度，不代表所有 Bossa Nova 都是同一速度。",
+    "timeSignature": "4/4",
+    "groove": "soft_syncopated_sway",
+    "grooveExplanation": "大拍很稳，但有些声音故意落在大拍之间，所以听起来轻轻摇摆。",
+    "rhythmElements": [
+      {
+        "id": "bass_pulse",
+        "name": "Bass Pulse",
+        "childName": "低音脚步",
+        "role": "pulse"
+      },
+      {
+        "id": "guitar_syncopation",
+        "name": "Syncopation",
+        "childName": "错开大拍的轻拍",
+        "role": "accent"
+      },
+      {
+        "id": "soft_shaker",
+        "name": "Shaker Subdivision",
+        "childName": "连续的沙沙声",
+        "role": "subdivision"
+      }
+    ],
+    "signatureElements": [
+      {
+        "id": "nylon_guitar",
+        "name": "Nylon-string Guitar",
+        "childName": "温暖的尼龙弦吉他"
+      },
+      {
+        "id": "jazz_color_chords",
+        "name": "Jazz Color Chords",
+        "childName": "带一点梦幻色彩的和弦"
+      }
+    ],
+    "formIdea": "从一把吉他开始，逐渐加入低音和细碎节奏；中间留出呼吸，再让全体回归。"
+  },
+  "teachingElements": [
+    {
+      "id": "bass_pulse",
+      "professionalName": "Bass Pulse",
+      "childName": "低音脉冲",
+      "syllable": "咚",
+      "childExplanation": "像轻轻走路的低音，让音乐稳稳向前。",
+      "musicalFunction": [
+        "pulse",
+        "low_percussion"
+      ],
+      "performance": {
+        "source": "大腿",
+        "action": "双手轮流轻拍",
+        "instruction": "第 1 拍和第 3 拍轻拍，不跺脚。",
+        "mapping": "bass-pulse-like",
+        "confidence": "B"
+      },
+      "soundProperties": {
+        "pitchRegion": "low",
+        "attack": "medium",
+        "duration": "short",
+        "brightness": "dark",
+        "densityPotential": "low",
+        "pitchStability": "unpitched"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "soft_low_drum"
+      },
+      "practiceGrid": [
+        "咚",
+        "空",
+        "空",
+        "空",
+        "咚",
+        "空",
+        "空",
+        "空"
+      ]
+    },
+    {
+      "id": "guitar_syncopation",
+      "professionalName": "Syncopation",
+      "childName": "切分节奏",
+      "syllable": "恰",
+      "childExplanation": "有些轻拍落在大拍中间，让节奏像迈一步又轻轻侧身。",
+      "musicalFunction": [
+        "accent"
+      ],
+      "performance": {
+        "source": "双手",
+        "action": "轻拍手掌",
+        "instruction": "只在提示出现时轻拍，声音不要太重。",
+        "mapping": "syncopated-guitar-rhythm-like",
+        "confidence": "B"
+      },
+      "soundProperties": {
+        "pitchRegion": "mid",
+        "attack": "medium",
+        "duration": "short",
+        "brightness": "neutral",
+        "densityPotential": "medium",
+        "pitchStability": "unpitched"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "soft_cross_stick"
+      },
+      "practiceGrid": [
+        "空",
+        "恰",
+        "空",
+        "恰",
+        "空",
+        "空",
+        "恰",
+        "空"
+      ]
+    },
+    {
+      "id": "soft_shaker",
+      "professionalName": "Shaker Subdivision",
+      "childName": "沙锤细分",
+      "syllable": "沙",
+      "childExplanation": "连续的沙沙声把每个大拍分得更细，但不会盖住吉他。",
+      "musicalFunction": [
+        "subdivision",
+        "continuous_texture"
+      ],
+      "performance": {
+        "source": "密封塑料容器和少量米粒",
+        "action": "小幅度左右摇动",
+        "instruction": "由老师检查瓶盖，靠近身体轻轻摇。",
+        "mapping": "shaker-like",
+        "confidence": "A"
+      },
+      "soundProperties": {
+        "pitchRegion": "high",
+        "attack": "soft",
+        "duration": "continuous",
+        "brightness": "bright",
+        "densityPotential": "high",
+        "pitchStability": "unpitched"
+      },
+      "audio": {
+        "mode": "record-or-browser",
+        "browserFallback": "soft_shaker"
+      },
+      "practiceGrid": [
+        "沙",
+        "沙",
+        "沙",
+        "沙",
+        "沙",
+        "沙",
+        "沙",
+        "沙"
+      ]
+    }
+  ],
+  "signatureSounds": [
+    {
+      "id": "nylon_guitar",
+      "professionalName": "Nylon-string Guitar",
+      "childName": "尼龙弦吉他",
+      "childExplanation": "琴弦声音温暖、不尖锐。低音稳住大拍，和弦常在大拍之间轻轻出现。",
+      "imageType": "instrument",
+      "audio": {
+        "mode": "browser",
+        "synthesis": "warm_plucked_guitar",
+        "previewSeconds": 4
+      }
+    },
+    {
+      "id": "jazz_color_chords",
+      "professionalName": "Major 7 / 6-9 Chord Color",
+      "childName": "爵士色彩和弦",
+      "childExplanation": "在普通大和弦里多放一两个音，声音会更柔和，也更像傍晚的光。",
+      "imageType": "chord_visualization",
+      "audio": {
+        "mode": "browser",
+        "synthesis": "warm_major7_chord",
+        "previewSeconds": 4
+      }
+    }
+  ],
+  "pages": [
+    {
+      "id": "intro",
+      "order": 1,
+      "type": "style_intro",
+      "title": "BOSSA NOVA",
+      "listenCues": [
+        "温暖吉他",
+        "轻轻错开的节奏",
+        "柔和的沙沙声"
+      ],
+      "previewSeconds": 16,
+      "primaryAction": "开始学习"
+    },
+    {
+      "id": "rhythm",
+      "order": 2,
+      "type": "rhythm_learning",
+      "title": "轻轻摇摆的节奏",
+      "groupOrder": [
+        "bass_pulse",
+        "guitar_syncopation",
+        "soft_shaker"
+      ],
+      "practiceBarsPerGroup": 2,
+      "highlightCurrentBeat": true
+    },
+    {
+      "id": "ensemble",
+      "order": 3,
+      "type": "layered_ensemble",
+      "title": "三组一起摇摆",
+      "countInBeats": 4,
+      "entryOrder": [
+        "bass_pulse",
+        "guitar_syncopation",
+        "soft_shaker"
+      ],
+      "barsPerEntry": 1,
+      "fullEnsembleBars": 2,
+      "showCurrentBeat": true
+    },
+    {
+      "id": "signature",
+      "order": 4,
+      "type": "signature_sounds",
+      "title": "吉他与温暖和弦",
+      "elements": [
+        "nylon_guitar",
+        "jazz_color_chords"
+      ]
+    },
+    {
+      "id": "recording",
+      "order": 5,
+      "type": "recording_workshop",
+      "title": "录下我们的节奏",
+      "recordTracks": [
+        "bass_pulse",
+        "guitar_syncopation",
+        "soft_shaker"
+      ],
+      "countInBeats": 4,
+      "recordBars": 2,
+      "fallbackEnabled": true
+    },
+    {
+      "id": "arrangement",
+      "order": 6,
+      "type": "section_arrangement",
+      "title": "编一首 Bossa Nova",
+      "arrangementId": "bossa_nova_24_bar"
+    },
+    {
+      "id": "performance",
+      "order": 7,
+      "type": "class_performance",
+      "title": "全班一起演奏",
+      "countInBeats": 4,
+      "modes": [
+        "section_rehearsal",
+        "full_performance"
+      ],
+      "showCurrentGroup": true,
+      "showCurrentBeat": true,
+      "showCurrentSection": true
+    }
+  ],
+  "arrangement": {
+    "id": "bossa_nova_24_bar",
+    "targetDurationSeconds": 50,
+    "calculatedDurationSeconds": 49.7,
+    "bpm": 116,
+    "timeSignature": "4/4",
+    "bars": 24,
+    "tracks": [
+      {
+        "id": "bass_pulse",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "guitar_syncopation",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "soft_shaker",
+        "source": "recording-or-browser"
+      },
+      {
+        "id": "nylon_guitar",
+        "source": "browser"
+      },
+      {
+        "id": "warm_bass",
+        "source": "browser"
+      }
+    ],
+    "sections": [
+      {
+        "id": "guitar_intro",
+        "label": "吉他开场",
+        "bars": 4,
+        "activeTracks": [
+          "nylon_guitar"
+        ]
+      },
+      {
+        "id": "groove_entry",
+        "label": "节奏进入",
+        "bars": 4,
+        "activeTracks": [
+          "bass_pulse",
+          "soft_shaker",
+          "nylon_guitar",
+          "warm_bass"
+        ]
+      },
+      {
+        "id": "full_theme",
+        "label": "完整主题",
+        "bars": 8,
+        "activeTracks": [
+          "bass_pulse",
+          "guitar_syncopation",
+          "soft_shaker",
+          "nylon_guitar",
+          "warm_bass"
+        ]
+      },
+      {
+        "id": "breathing_space",
+        "label": "轻轻留白",
+        "bars": 4,
+        "activeTracks": [
+          "soft_shaker",
+          "nylon_guitar"
+        ]
+      },
+      {
+        "id": "final_return",
+        "label": "全体回来",
+        "bars": 4,
+        "activeTracks": [
+          "bass_pulse",
+          "guitar_syncopation",
+          "soft_shaker",
+          "nylon_guitar",
+          "warm_bass"
+        ]
+      }
+    ]
+  },
+  "safety": {
+    "approvedObjects": [
+      "大腿",
+      "双手",
+      "密封塑料容器",
+      "少量米粒"
+    ],
+    "warnings": [
+      "所有动作保持轻柔，不用力跺脚或拍击身体。",
+      "装有米粒的容器必须由老师确认密封。",
+      "不使用玻璃容器或尖锐金属物。"
+    ]
+  },
+  "review": {
+    "musicChecked": true,
+    "teachingChecked": true,
+    "safetyChecked": true,
+    "audioRightsChecked": true,
+    "audioRightsNote": "当前方案只定义浏览器合成声，不包含商业歌曲或受保护采样。",
+    "remainingWork": [
+      "制作尼龙弦吉他、柔和低音与 Shaker 的浏览器声音。",
+      "由音乐老师试听并微调切分节奏练习型。",
+      "生成对应的乐器插画后再进入前端实现。"
+    ]
+  }
+}

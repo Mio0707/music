@@ -60,7 +60,8 @@ for (const syllable of syllables) {
 }
 
 const manifests = [];
-for (const packName of fs.readdirSync(musicRoot)) {
+const catalog = JSON.parse(fs.readFileSync(path.join(musicRoot, "catalog.json"), "utf8"));
+for (const packName of Object.keys(catalog.packs || {})) {
   const packDir = path.join(musicRoot, packName, "v01");
   const manifestPath = path.join(packDir, "manifest.json");
   const scorePath = path.join(packDir, "score.json");
