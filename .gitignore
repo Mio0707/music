@@ -20,3 +20,6 @@ __pycache__/
 # 本机密钥与过程输出
 .env
 output/
+
+# 飞书妙搭部署产物（由 prototype 源文件生成）
+miaoda-dist/

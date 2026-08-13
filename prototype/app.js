@@ -42,7 +42,7 @@ const SOLFEGE_SOURCE_FREQUENCIES = {
 };
 const SOLFEGE_MIN_VOICE_SECONDS = 0.8;
 const SOLFEGE_RECOMMENDED_VOICE_SECONDS = "1.2–1.8";
-const CHILDREN_MUSIC_STUDIO_URL = "children-music-studio/";
+const CHILDREN_MUSIC_STUDIO_URL = "children-music-studio/?demo=1";
 const grooveAudio = {
   steady: { bpm: 88, duration: 5.454542 },
   bounce: { bpm: 96, duration: 5 },
@@ -222,20 +222,20 @@ const DONGFANGHONG_SCORE = {
   measures: [
     lessonMeasure(1, "page1", [[5, 0, 1, "东"], [5, 0, .5, "方"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
     lessonMeasure(2, "page1", [[2, 0, 2, "红"]], { beats: 2, meter: "2/4" }),
-    lessonMeasure(3, "page1", [[1, 0, 1, "太"], [1, 0, .5, "阳"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(3, "page1", [[1, 0, 1, "太"], [1, 0, .5, "阳"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
     lessonMeasure(4, "page1", [[2, 0, 2, "升"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(5, "page2", [[5, 0, 1, "中"], [5, 0, 1, "国"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(6, "page2", [[6, 0, .5, "出"], [1, 1, .5], [6, 0, .5, "了"], [5, 0, .5, "个"]], { beats: 2, meter: "2/4" }),
-    lessonMeasure(7, "page2", [[1, 0, 1, "毛"], [1, 0, .5, "泽"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(7, "page2", [[1, 0, 1, "毛"], [1, 0, .5, "泽"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
     lessonMeasure(8, "page2", [[2, 0, 2, "东"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(9, "page3", [[5, 0, 1, "他"], [2, 0, 1, "为"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(10, "page3", [[1, 0, 1, "人"], [7, -1, .5, "民"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
     lessonMeasure(11, "page3", [[5, -1, 1, "谋"], [5, 0, 1, "幸"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(12, "page3", [[2, 0, 1, "福"], [3, 0, .5, "呼"], [2, 0, .5, "儿"]], { beats: 2, meter: "2/4" }),
-    lessonMeasure(13, "page4", [[1, 0, 1, "嗨"], [1, 0, .5, "哟"], [6, 0, .5]], { beats: 2, meter: "2/4" }),
+    lessonMeasure(13, "page4", [[1, 0, 1, "嗨"], [1, 0, .5, "哟"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
     lessonMeasure(14, "page4", [[2, 0, .5, "他"], [3, 0, .5, "是"], [2, 0, .5, "人"], [1, 0, .5, "民"]], { beats: 2, meter: "2/4" }),
     lessonMeasure(15, "page4", [[2, 0, .5, "大"], [1, 0, .5], [7, -1, .5, "救"], [6, -1, .5]], { beats: 2, meter: "2/4" }),
-    lessonMeasure(16, "page4", [[5, 0, 2, "星"]], { beats: 2, meter: "2/4" })
+    lessonMeasure(16, "page4", [[5, -1, 2, "星"]], { beats: 2, meter: "2/4" })
   ],
   phrases: [
     { id: "page1", label: "第 1 页", lyrics: "东方红，太阳升" },
@@ -548,6 +548,9 @@ let mediaRecorder;
 let stageMotionTimer;
 let activeVoiceAudios = [];
 let activeStemAudios = [];
+let activeCompositionSources = [];
+let compositionPlaybackToken = 0;
+const compositionBufferCache = new Map();
 let activeSolfegeAudios = [];
 let activeSolfegeNodes = [];
 let activePreviewAudio;
@@ -638,6 +641,7 @@ function bodyMusicPath(lesson, relativePath) {
 }
 
 function stopMusicAudio() {
+  stopCompositionSources();
   activeStemAudios.forEach(audio => {
     audio.pause();
     audio.currentTime = 0;
@@ -651,6 +655,15 @@ function stopMusicAudio() {
   });
   activeSolfegeAudios = [];
   state.packPreviewing = false;
+}
+
+function stopCompositionSources() {
+  compositionPlaybackToken += 1;
+  activeCompositionSources.forEach(source => {
+    try { source.stop(); } catch {}
+    try { source.disconnect(); } catch {}
+  });
+  activeCompositionSources = [];
 }
 
 function stopBodyPlayback() {
@@ -4396,7 +4409,7 @@ function schedulePoemLineClips(startBar) {
   if (startBar < 6) later(stopPoemAudio, (6 - startBar) * barDuration * 1000);
 }
 
-function playCollaborationOnce({ markComplete = false, startBar = 0 } = {}) {
+async function playCollaborationOnce({ markComplete = false, startBar = 0 } = {}) {
   const playbackMode = state.poetryPreviewMode || "mix";
   stopCollaborationPlayback();
   state.poetryPreviewMode = playbackMode;
@@ -4405,32 +4418,104 @@ function playCollaborationOnce({ markComplete = false, startBar = 0 } = {}) {
   state.collaborationBar = startBar;
   state.collaborationGestureIndex = startBar;
   state.collaborationActionIndex = 0;
-  schedulePoemLineClips(startBar);
-  let sectionIndex = Math.floor(startBar / 2);
-  let firstSection = true;
-  const next = () => {
-    if (sectionIndex >= 4) {
-      stopPoemAudio();
-      state.poetryPreviewMode = null;
-      state.playingSection = null;
-      state.collaborationBar = 7;
-      state.collaborationDone = markComplete;
-      render();
-      showToast(markComplete ? "合作演奏完成！可以交换角色再来一次。" : "完整作品播放完成。" );
-      return;
+  state.playingSection = Math.floor(startBar / 2);
+  render();
+
+  const token = compositionPlaybackToken;
+  const ctx = getAudioContext();
+  const unlockSource = ctx.createBufferSource();
+  unlockSource.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  unlockSource.connect(ctx.destination);
+  unlockSource.start();
+  const barDuration = twoBarDuration() / 2;
+  const audioEntries = new Map();
+
+  for (let sectionIndex = Math.floor(startBar / 2); sectionIndex < 4; sectionIndex += 1) {
+    state.sections[sectionIndex].forEach(key => {
+      if (stemAnimals.includes(key)) {
+        const customDog = key === "dog" && state.dogRhythmSource === "custom" ? state.bodyRecordings[currentPackId()] : null;
+        const url = customDog?.audioUrl || musicPath(`stems/${key}.wav`);
+        audioEntries.set(`stem:${key}:${url}`, { type: "stem", key, url });
+      } else if (isVoiceStickerKey(key)) {
+        const sticker = voiceStickerForKey(key);
+        if (sticker?.audioUrl) audioEntries.set(`voice:${key}:${sticker.audioUrl}`, { type: "voice", key, url: sticker.audioUrl });
+      }
+    });
+  }
+  for (let bar = Math.max(2, startBar); bar < 6; bar += 1) {
+    const url = poemLineAudioUrl(bar - 2);
+    if (url) audioEntries.set(`poem:${bar}:${url}`, { type: "poem", key: String(bar), url });
+  }
+
+  const loaded = await Promise.all([...audioEntries.values()].map(async entry => {
+    try {
+      return { ...entry, buffer: await loadCompositionBuffer(entry.url, ctx) };
+    } catch {
+      return null;
     }
-    const startLocalBar = firstSection ? startBar % 2 : 0;
-    state.collaborationBar = sectionIndex * 2 + startLocalBar;
-    state.collaborationGestureIndex = state.collaborationBar;
-    state.collaborationActionIndex = 0;
-    scheduleCollaborationSectionCues(sectionIndex, startLocalBar);
-    playSection(sectionIndex, true, () => {
-      firstSection = false;
-      sectionIndex += 1;
-      next();
-    }, { startOffsetSeconds: startLocalBar * twoBarDuration() / 2 });
-  };
-  next();
+  }));
+  if (token !== compositionPlaybackToken) return;
+  const buffers = loaded.filter(Boolean);
+  if (!buffers.length) {
+    state.poetryPreviewMode = null;
+    state.playingSection = null;
+    render();
+    showToast("完整作品没有成功加载，请再试一次。");
+    return;
+  }
+
+  const byId = new Map(buffers.map(entry => [`${entry.type}:${entry.key}`, entry]));
+  const startTime = ctx.currentTime + .08;
+  for (let sectionIndex = Math.floor(startBar / 2); sectionIndex < 4; sectionIndex += 1) {
+    const sectionStartBar = sectionIndex * 2;
+    const segmentStartBar = Math.max(startBar, sectionStartBar);
+    const startLocalBar = segmentStartBar - sectionStartBar;
+    const playAt = startTime + (segmentStartBar - startBar) * barDuration;
+    const offsetSeconds = startLocalBar * barDuration;
+    const durationSeconds = (sectionStartBar + 2 - segmentStartBar) * barDuration;
+    state.sections[sectionIndex].forEach(key => {
+      const type = stemAnimals.includes(key) ? "stem" : "voice";
+      const entry = byId.get(`${type}:${key}`);
+      if (!entry || offsetSeconds >= entry.buffer.duration) return;
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = entry.buffer;
+      gain.gain.value = type === "voice" ? .82 : ({ dog: .92, bear: 1, cat: .88, lion: .94 }[key] || 1);
+      source.connect(gain).connect(ctx.destination);
+      source.start(playAt, offsetSeconds, Math.min(durationSeconds, entry.buffer.duration - offsetSeconds));
+      activeCompositionSources.push(source);
+    });
+    later(() => {
+      if (token !== compositionPlaybackToken) return;
+      state.playingSection = sectionIndex;
+      state.collaborationBar = segmentStartBar;
+      state.collaborationGestureIndex = segmentStartBar;
+      state.collaborationActionIndex = 0;
+      render();
+      scheduleCollaborationSectionCues(sectionIndex, startLocalBar);
+    }, Math.max(0, (playAt - ctx.currentTime) * 1000));
+  }
+  for (let bar = Math.max(2, startBar); bar < 6; bar += 1) {
+    const entry = byId.get(`poem:${bar}`);
+    if (!entry) continue;
+    const source = ctx.createBufferSource();
+    const gain = ctx.createGain();
+    source.buffer = entry.buffer;
+    gain.gain.value = .96;
+    source.connect(gain).connect(ctx.destination);
+    source.start(startTime + (bar - startBar) * barDuration, 0, Math.min(barDuration, entry.buffer.duration));
+    activeCompositionSources.push(source);
+  }
+  later(() => {
+    if (token !== compositionPlaybackToken) return;
+    activeCompositionSources = [];
+    state.poetryPreviewMode = null;
+    state.playingSection = null;
+    state.collaborationBar = 7;
+    state.collaborationDone = markComplete;
+    render();
+    showToast(markComplete ? "合作演奏完成！可以交换角色再来一次。" : "完整作品播放完成。" );
+  }, Math.max(0, (startTime + (8 - startBar) * barDuration - ctx.currentTime) * 1000));
 }
 
 function previewPoemVocal() {
@@ -5568,30 +5653,109 @@ function stopComposition() {
   showToast("已暂停，可以继续修改或重新播放。");
 }
 
-function playAll(embellished = false) {
+async function loadCompositionBuffer(url, ctx) {
+  if (!compositionBufferCache.has(url)) {
+    compositionBufferCache.set(url, fetch(url)
+      .then(response => {
+        if (!response.ok) throw new Error(`Audio request failed: ${response.status}`);
+        return response.arrayBuffer();
+      })
+      .then(data => ctx.decodeAudioData(data.slice(0)))
+      .catch(error => {
+        compositionBufferCache.delete(url);
+        throw error;
+      }));
+  }
+  return compositionBufferCache.get(url);
+}
+
+async function playAll(embellished = false) {
   clearTimers();
+  stopMusicAudio();
+  activeVoiceAudios.forEach(audio => audio.pause());
+  activeVoiceAudios = [];
+  const token = compositionPlaybackToken;
+  const ctx = getAudioContext();
+  const unlockSource = ctx.createBufferSource();
+  unlockSource.buffer = ctx.createBuffer(1, 1, ctx.sampleRate);
+  unlockSource.connect(ctx.destination);
+  unlockSource.start();
+
   state.stageOpen = true;
   state.stageCompleted = false;
-  let index = 0;
-  let round = 0;
-  const next = () => {
-    if (index >= 4) {
-      if (round === 0) {
-        round = 1;
-        index = 0;
-        showToast("第一遍听完了，第二遍可以一起跟着演。" );
-        next();
-        return;
-      }
-      state.playingSection = null;
-      state.stageCompleted = true;
-      render();
-      showToast("演奏完成，这是属于你的音乐");
-      return;
+  state.playingSection = 0;
+  state.stageSection = 0;
+  render();
+
+  const sectionDuration = state.musicSource === "teacher" && state.selectedTeacherPack?.durationSeconds
+    ? state.selectedTeacherPack.durationSeconds
+    : twoBarDuration();
+  const audioEntries = new Map();
+  state.sections.forEach(section => {
+    section.filter(animal => stemAnimals.includes(animal)).forEach(animal => {
+      const customDog = animal === "dog" && state.dogRhythmSource === "custom" ? state.bodyRecordings[currentPackId()] : null;
+      const url = customDog?.audioUrl || musicPath(`stems/${animal}.wav`);
+      audioEntries.set(`stem:${animal}:${url}`, { type: "stem", animal, url });
+    });
+    section.filter(isVoiceStickerKey).forEach(key => {
+      const sticker = voiceStickerForKey(key);
+      if (sticker?.audioUrl) audioEntries.set(`voice:${key}:${sticker.audioUrl}`, { type: "voice", key, url: sticker.audioUrl });
+    });
+  });
+
+  const loaded = await Promise.all([...audioEntries.values()].map(async entry => {
+    try {
+      return { ...entry, buffer: await loadCompositionBuffer(entry.url, ctx) };
+    } catch {
+      return null;
     }
-    playSection(index, embellished, () => { index += 1; next(); });
-  };
-  next();
+  }));
+  if (token !== compositionPlaybackToken) return;
+  const buffers = loaded.filter(Boolean);
+  if (!buffers.length) {
+    state.playingSection = null;
+    render();
+    showToast("音乐没有成功加载，请再试一次。");
+    return;
+  }
+
+  const entryByStem = new Map(buffers.filter(entry => entry.type === "stem").map(entry => [entry.animal, entry]));
+  const entryByVoice = new Map(buffers.filter(entry => entry.type === "voice").map(entry => [entry.key, entry]));
+  const startTime = ctx.currentTime + 0.08;
+  for (let slot = 0; slot < 8; slot += 1) {
+    const sectionIndex = slot % 4;
+    const section = state.sections[sectionIndex];
+    const playAt = startTime + slot * sectionDuration;
+    section.forEach(key => {
+      const entry = stemAnimals.includes(key) ? entryByStem.get(key) : entryByVoice.get(key);
+      if (!entry) return;
+      const source = ctx.createBufferSource();
+      const gain = ctx.createGain();
+      source.buffer = entry.buffer;
+      gain.gain.value = entry.type === "voice"
+        ? (embellished ? 0.82 : 0.94)
+        : (embellished ? ({ dog: 0.92, bear: 1, cat: 0.88, lion: 0.94 }[key] || 1) : 0.9);
+      source.connect(gain).connect(ctx.destination);
+      source.start(playAt, 0, Math.min(sectionDuration, entry.buffer.duration));
+      activeCompositionSources.push(source);
+    });
+    later(() => {
+      if (token !== compositionPlaybackToken) return;
+      state.playingSection = sectionIndex;
+      state.stageSection = sectionIndex;
+      state.stageOpen = true;
+      render();
+      if (slot === 4) showToast("第一遍听完了，第二遍可以一起跟着演。");
+    }, Math.max(0, (playAt - ctx.currentTime) * 1000));
+  }
+  later(() => {
+    if (token !== compositionPlaybackToken) return;
+    activeCompositionSources = [];
+    state.playingSection = null;
+    state.stageCompleted = true;
+    render();
+    showToast("演奏完成，这是属于你的音乐");
+  }, Math.max(0, (startTime + 8 * sectionDuration - ctx.currentTime) * 1000));
 }
 
 function beginRefine() {

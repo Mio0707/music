@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>儿童音乐设计台</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <div><p class="eyebrow">儿童音乐体系 · 自由创作工作流</p><h1>儿童音乐设计台</h1><p class="intro hero-copy">说出你想表达的心情和身体律动，AI 会先整理成一张可检查的音乐设计卡，再完成旋律、审核、试听与分轨。</p></div>
+      <div class="model-badge"><span></span><div><small>当前创作模型</small><strong>千问 3.7 Max</strong></div></div>
+    </header>
+
+    <section class="overview progress-card" aria-label="制作进度">
+      <div><span class="editor-label">当前进度</span><strong id="progress-title">等待创作描述</strong><small id="progress-copy">输入两段感受，先让 AI 把想法变成可执行的设计。</small></div>
+      <div class="progress-track"><span id="progress-fill"></span></div>
+      <div class="progress-count"><strong id="progress-percent">0%</strong><span>完成度</span></div>
+    </section>
+
+    <section class="panel designer-panel" aria-labelledby="brief-title">
+      <div class="section-heading">
+        <div class="step-number">1</div>
+        <div><p class="section-kicker">先把感觉说清楚</p><h2 id="brief-title">描述这段音乐</h2><p>不用懂乐理。可以写场景、颜色、速度、身体动作，或你希望孩子听完有什么感受。</p></div>
+      </div>
+      <div class="brief-grid">
+        <label class="brief-field"><span>它是什么心情？</span><small>例如：雨停以后想起朋友，温柔、有一点距离，但不是悲伤。</small><textarea id="mood-input" rows="5" maxlength="600" placeholder="例：夏天，下完雨后天晴了我很高兴。"></textarea></label>
+        <label class="brief-field"><span>身体想怎么动？</span><small>例如：像坐在秋千上慢慢前后摆，重心柔和，偶尔轻轻向前。</small><textarea id="groove-input" rows="5" maxlength="600" placeholder="例：蹦蹦跳跳回家"></textarea></label>
+      </div>
+      <div class="action-row"><span id="design-status" class="status" role="status">描述越具体，AI 越容易保持心情与律动的一致。</span><button class="button primary" id="design-button" type="button">生成 AI 音乐设计卡</button></div>
+
+      <div class="design-card-wrap is-hidden" id="design-card-wrap">
+        <aside class="design-card-summary">
+          <span class="status-pill">AI 已整理</span>
+          <h3 id="card-title">儿童音乐主题</h3>
+          <p id="card-intent"></p>
+          <div class="inherit-list">
+            <div><span>01</span><p><strong>心情身份</strong><b id="card-mood"></b></p></div>
+            <div><span>02</span><p><strong>律动感觉</strong><b id="card-groove"></b></p></div>
+            <div><span>03</span><p><strong>核心动机</strong><b id="card-motif"></b></p></div>
+            <div><span>04</span><p><strong>速度与和声</strong><b id="card-harmony"></b></p></div>
+          </div>
+        </aside>
+        <div class="design-card-editor">
+          <div class="editor-heading"><div><span class="editor-label">可检查、可调整</span><h3>确认音乐设计卡</h3></div><button class="button dark" id="prepare-button" type="button">确认设计并生成提示词</button></div>
+          <textarea id="card-editor" class="code-editor" rows="22" spellcheck="false" aria-label="AI音乐设计卡JSON"></textarea>
+          <p class="guardrail-note">平台会锁定儿童安全线、两小节结构、音域与声部避让；你仍可调整心情文字、速度、动机、和声与角色表达。</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel production-panel is-hidden" id="production-panel" aria-labelledby="production-title">
+      <div class="section-heading"><div class="step-number">2</div><div><p class="section-kicker">把设计变成可以听的音乐</p><h2 id="production-title">生成、审核与试听</h2><p id="production-summary">设计确认后，平台会调用千问生成 JSON，并按儿童旋律、和声、律动和声部协作规则检查。</p></div></div>
+      <div class="production-steps">
+        <article class="production-step is-active"><div class="mini-number">1</div><div class="production-content"><div class="production-heading"><div><h3>审核生产提示词</h3><p>它由设计卡与平台安全规则自动组合，你可以在调用模型前检查。</p></div><button class="button primary compact" id="approve-prompt-button">确认提示词</button></div><textarea id="prompt-editor" class="prompt-editor" rows="14"></textarea></div></article>
+        <article class="production-step"><div class="mini-number">2</div><div class="production-content"><div class="production-heading"><div><h3>生成并检查完整音乐 JSON</h3><p>不合格结果会自动修改，仍可手动编辑后重新检查。</p></div><button class="button primary compact" id="generate-json-button" disabled>调用千问生成 JSON</button></div><div id="json-editor-wrap" class="json-editor-wrap is-hidden"><div class="json-editor-toolbar"><span id="json-edit-status" class="json-edit-status">等待检查</span><div class="json-editor-actions"><button class="button secondary compact" id="format-json-button">整理格式</button><button class="button primary compact" id="save-json-button">检查并保存</button></div></div><textarea id="json-editor" class="code-editor combination-json-editor" rows="22" spellcheck="false"></textarea></div></div></article>
+        <article class="production-step"><div class="mini-number">3</div><div class="production-content"><div class="production-heading"><div><h3>试听完整编配</h3><p>先听整体是否符合设计卡，再决定是否进入正式分轨。</p></div><button class="button secondary compact" id="preview-button" disabled>生成试听</button></div><div id="preview-box" class="preview-box is-hidden"><audio id="preview-audio" controls preload="none"></audio><button class="button dark compact" id="approve-preview-button">确认这版音乐</button></div></div></article>
+        <article class="production-step final-production-step"><div class="mini-number">4</div><div class="production-content"><div class="production-heading"><div><h3>生成正式分轨</h3><p>生成键盘、贝斯、鼓和萨克斯四条音轨，继续调音和保存。</p></div><button class="button primary compact" id="generate-stems-button" disabled>生成正式分轨</button></div></div></article>
+      </div>
+      <div id="workflow-status" class="status" role="status">等待确认设计卡。</div>
+    </section>
+
+    <section class="panel mixer-panel is-hidden" id="mixer-panel" aria-labelledby="mixer-title">
+      <div class="section-heading mixer-heading"><div class="step-number">3</div><div><p class="section-kicker">最后调整</p><h2 id="mixer-title">儿童小乐队分轨</h2><p id="kit-summary">四条音轨会从同一拍开始。</p></div><div class="transport"><button class="round-button play" id="play-button" aria-label="播放">▶</button><button class="round-button" id="stop-button" aria-label="停止">■</button><span id="transport-label">准备播放</span></div></div>
+      <div class="tracks" id="tracks"></div>
+      <div id="mixer-status" class="status">试听并调整各分轨音量。</div>
+      <div class="export-row"><p>保存只写入儿童音乐设计台自己的资源目录，不会覆盖动物乐队设计台的16套成品。</p><div class="export-actions"><button class="button secondary" id="export-button">导出当前混音</button><button class="button primary" id="publish-button">保存正式分轨</button></div></div>
+      <div id="download-box" class="download-box is-hidden"><span>混音已生成</span><a class="button secondary" id="download-link" download>下载 WAV</a></div>
+      <div id="publish-box" class="download-box is-hidden"><span id="publish-result">正式分轨已保存</span><a class="button secondary" id="manifest-link" target="_blank">查看说明文件</a></div>
+    </section>
+  </main>
+  <script src="demo-mode.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

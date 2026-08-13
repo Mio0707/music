@@ -17,7 +17,7 @@
     { "number": 3, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 1, "octave": 0, "beat": 0, "duration": 1, "lyric": "太" },
       { "degree": 1, "octave": 0, "beat": 1, "duration": 0.5, "lyric": "阳" },
-      { "degree": 6, "octave": 0, "beat": 1.5, "duration": 0.5 }
+      { "degree": 6, "octave": -1, "beat": 1.5, "duration": 0.5 }
     ] },
     { "number": 4, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 2, "octave": 0, "beat": 0, "duration": 2, "lyric": "升" }
@@ -35,7 +35,7 @@
     { "number": 7, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 1, "octave": 0, "beat": 0, "duration": 1, "lyric": "毛" },
       { "degree": 1, "octave": 0, "beat": 1, "duration": 0.5, "lyric": "泽" },
-      { "degree": 6, "octave": 0, "beat": 1.5, "duration": 0.5 }
+      { "degree": 6, "octave": -1, "beat": 1.5, "duration": 0.5 }
     ] },
     { "number": 8, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 2, "octave": 0, "beat": 0, "duration": 2, "lyric": "东" }
@@ -61,7 +61,7 @@
     { "number": 13, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 1, "octave": 0, "beat": 0, "duration": 1, "lyric": "嗨" },
       { "degree": 1, "octave": 0, "beat": 1, "duration": 0.5, "lyric": "哟" },
-      { "degree": 6, "octave": 0, "beat": 1.5, "duration": 0.5 }
+      { "degree": 6, "octave": -1, "beat": 1.5, "duration": 0.5 }
     ] },
     { "number": 14, "beats": 2, "meter": "2/4", "notes": [
       { "degree": 2, "octave": 0, "beat": 0, "duration": 0.5, "lyric": "他" },
@@ -76,7 +76,7 @@
       { "degree": 6, "octave": -1, "beat": 1.5, "duration": 0.5 }
     ] },
     { "number": 16, "beats": 2, "meter": "2/4", "notes": [
-      { "degree": 5, "octave": 0, "beat": 0, "duration": 2, "lyric": "星" }
+      { "degree": 5, "octave": -1, "beat": 0, "duration": 2, "lyric": "星" }
     ] }
   ],
   "phrases": [
