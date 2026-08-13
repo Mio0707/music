@@ -67,12 +67,30 @@ if (lyrics !== "东方红太阳升中国出了个毛泽东他为人民谋幸福�
 const firstDo = score.notes.find(note => note.degree === 1 && note.octave === 0);
 if (Math.abs(firstDo.frequency - 349.228) > 0.01) throw new Error("F 调 do 的实际音高错误");
 const taiYangSheng = score.measures.find(measure => measure.number === 3)?.notes;
-if (!taiYangSheng || taiYangSheng.map(note => note.duration).join(",") !== "1,0.5,0.5") {
-  throw new Error("“太阳升”的 1 1 6 没有按一拍、半拍、半拍播放");
+if (!taiYangSheng || taiYangSheng.map(note => note.duration).join(",") !== "1,0.5,0.5" || taiYangSheng[2]?.degree !== 6 || taiYangSheng[2]?.octave !== -1) {
+  throw new Error("“太阳升”的 1 1 低音6 没有按一拍、半拍、半拍播放");
+}
+for (const measureNumber of [3, 7, 13]) {
+  const finalSix = score.measures.find(measure => measure.number === measureNumber)?.notes?.at(-1);
+  if (!finalSix || finalSix.degree !== 6 || finalSix.octave !== -1) throw new Error(`第 ${measureNumber} 小节末尾没有保存为低音 6`);
+}
+const expectedOctaves = new Map([
+  [1, [0, 0, 0]], [2, [0]], [3, [0, 0, -1]], [4, [0]],
+  [5, [0, 0]], [6, [0, 1, 0, 0]], [7, [0, 0, -1]], [8, [0]],
+  [9, [0, 0]], [10, [0, -1, -1]], [11, [-1, 0]], [12, [0, 0, 0]],
+  [13, [0, 0, -1]], [14, [0, 0, 0, 0]], [15, [0, 0, -1, -1]], [16, [-1]]
+]);
+for (const [measureNumber, expected] of expectedOctaves) {
+  const actual = score.measures.find(measure => measure.number === measureNumber)?.notes.map(note => note.octave);
+  if (JSON.stringify(actual) !== JSON.stringify(expected)) throw new Error(`第 ${measureNumber} 小节的高低音位置与校对版不一致`);
 }
 const mouXing = score.measures.find(measure => measure.number === 11)?.notes;
 if (!mouXing || mouXing[0]?.degree !== 5 || mouXing[0]?.octave !== -1 || mouXing[1]?.degree !== 5 || mouXing[1]?.octave !== 0) {
   throw new Error("第 11 小节“谋幸”没有保存为低音 5、中央音 5");
+}
+const finalNote = score.measures.find(measure => measure.number === 16)?.notes?.[0];
+if (!finalNote || finalNote.degree !== 5 || finalNote.octave !== -1 || finalNote.duration !== 2) {
+  throw new Error("最后一小节“大救星”的“星”没有保存为二拍低音 5");
 }
 const expectedMeasureRhythms = new Map([
   [1, "1,0.5,0.5"], [3, "1,0.5,0.5"], [7, "1,0.5,0.5"], [10, "1,0.5,0.5"], [13, "1,0.5,0.5"]
