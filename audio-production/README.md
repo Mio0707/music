@@ -48,11 +48,11 @@ python audio-production/studio/server.py --open
 
 ## 规则与数据位置
 
-- `knowledge/project.json`：项目总规范。
-- `knowledge/grooves.json`：4个律动模板。
-- `knowledge/instruments.json`：5只动物的乐器职责。
-- `knowledge/combinations.json`：16个组合适配规则。
-- `knowledge/themes/`：已经锁定的心情母版。
+- `../music_studio_common/knowledge/project.json`：项目总规范。
+- `../music_studio_common/knowledge/grooves.json`：4个律动模板。
+- `../music_studio_common/knowledge/instruments.json`：5只动物的乐器职责。
+- `../music_studio_common/knowledge/combinations.json`：16个组合适配规则。
+- `../music_studio_common/knowledge/themes/`：已经锁定的心情母版。
 - `studio-data/theme-drafts/`：AI心情草案，本机保存，不进入Git。
 - `studio-data/records/`：提示词、模型返回、JSON和试听记录，本机保存，不进入Git。
 - `studio-data/jobs/`：正式分轨任务，本机保存，不进入Git。

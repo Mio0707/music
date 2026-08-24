@@ -28,11 +28,11 @@
 
 | 层级 | 决定内容 | 保存位置 |
 | --- | --- | --- |
-| 项目总规范 | 年龄、调性、拍号、小节数、音域、循环和输出格式 | `audio-production/knowledge/project.json` |
-| 心情主题母版 | 核心动机、和声家族、旋律轮廓、力度与乐句 | `audio-production/knowledge/themes/` |
-| 律动模板 | BPM、重音、节奏密度、鼓、贝斯和键盘伴奏方式 | `audio-production/knowledge/grooves.json` |
-| 动物乐器规则 | 小熊键盘、小猫贝斯、小狗鼓、小狮子萨克斯、小兔唱名的固定职责 | `audio-production/knowledge/instruments.json` |
-| 组合适配规则 | 心情与律动结合时的少量调整 | `audio-production/knowledge/combinations.json` |
+| 项目总规范 | 年龄、调性、拍号、小节数、音域、循环和输出格式 | `music_studio_common/knowledge/project.json` |
+| 心情主题母版 | 核心动机、和声家族、旋律轮廓、力度与乐句 | `music_studio_common/knowledge/themes/` |
+| 律动模板 | BPM、重音、节奏密度、鼓、贝斯和键盘伴奏方式 | `music_studio_common/knowledge/grooves.json` |
+| 动物乐器规则 | 小熊键盘、小猫贝斯、小狗鼓、小狮子萨克斯、小兔唱名的固定职责 | `music_studio_common/knowledge/instruments.json` |
+| 组合适配规则 | 心情与律动结合时的少量调整 | `music_studio_common/knowledge/combinations.json` |
 
 动物乐器处于同一规则层级。心情母版不单独突出萨克斯；萨克斯只是在动物乐器规则中承担短回应职责。
 

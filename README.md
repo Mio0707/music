@@ -49,3 +49,8 @@ python prototype/server.py --port 4174
 - `prototype/assets/stickers/`：动物与动作素材。
 - `prototype/tests/`：当前 Demo 的自动校验。
 - `lab-course-rules/`：LAB 音乐分析与教学内容生成规则、参考规范和验证案例。
+- `music_studio_common/`：两套音乐制作台共用的服务端引擎、校验/渲染脚本和音乐知识库。
+- `audio-production/`：4 个心情母版 × 4 个律动的原始生产流程及专项音频脚本。
+- `children-music-studio/`：新版自由描述式儿童音乐设计界面、生成数据和发布资源。
+
+两套音乐制作台保留各自的页面入口与数据目录，但不再维护重复的服务端、校验器、渲染脚本和知识数据。

@@ -15,11 +15,11 @@
 
 ## 信息保存位置
 
-- 项目总规范：`audio-production/knowledge/project.json`
-- 四种律动模板：`audio-production/knowledge/grooves.json`
-- 动物乐器规则：`audio-production/knowledge/instruments.json`
-- 16 种组合适配：`audio-production/knowledge/combinations.json`
-- 已锁定心情母版：`audio-production/knowledge/themes/`
+- 项目总规范：`music_studio_common/knowledge/project.json`
+- 四种律动模板：`music_studio_common/knowledge/grooves.json`
+- 动物乐器规则：`music_studio_common/knowledge/instruments.json`
+- 16 种组合适配：`music_studio_common/knowledge/combinations.json`
+- 已锁定心情母版：`music_studio_common/knowledge/themes/`
 - AI 心情草案：`audio-production/studio-data/theme-drafts/`
 - 音乐制作记录：`audio-production/studio-data/records/`
 - 正式分轨任务：`audio-production/studio-data/jobs/`
