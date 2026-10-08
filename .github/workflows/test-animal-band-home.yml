@@ -1,0 +1,25 @@
+name: Family H5 initial checks
+on:
+  push:
+    branches: [feature/animal-band-home-mvp]
+  pull_request:
+    paths: [home/**]
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check home/src/main.js
+          node --check home/src/audio.js
+          node --check home/src/content.js
+          node --check home/src/storage.js
+          node --check home/scripts/stage-legacy-assets.mjs
+      - name: Test family music domain
+        run: node --test home/tests/*.test.mjs
+      - name: Verify preview source assets
+        run: node home/scripts/stage-legacy-assets.mjs
