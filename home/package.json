@@ -1,0 +1,21 @@
+{
+  "name": "animal-band-home",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/stage-legacy-assets.mjs",
+    "dev": "vite --host 127.0.0.1",
+    "prebuild": "node scripts/stage-legacy-assets.mjs",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@animal-band/core": "github:Mio0707/animal-band-core#60e5b74a676221d703ac7f51194e5d900f220b84",
+    "@animal-band/data": "github:Mio0707/animal-band-data#81a782ca99f6ca98ad5ee413872264cd6719a73c"
+  },
+  "devDependencies": {
+    "vite": "^6.3.5"
+  }
+}
