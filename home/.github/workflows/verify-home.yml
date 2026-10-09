@@ -1,0 +1,25 @@
+name: Family H5 initial checks
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths: ['**']
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax checks
+        run: |
+          node --check src/main.js
+          node --check src/audio.js
+          node --check src/content.js
+          node --check src/storage.js
+          node --check scripts/stage-legacy-assets.mjs
+      - name: Test family music domain
+        run: node --test tests/*.test.mjs
+      - name: Verify preview source assets
+        run: AB_FORCE_REMOTE_ASSETS=1 node scripts/stage-legacy-assets.mjs
