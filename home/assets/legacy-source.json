@@ -1,0 +1,118 @@
+{
+  "format": "github-pinned-binaries-v1",
+  "origin": "Mio0707/music",
+  "ref": "076205fef273da65eb94e2b9c351aca818c5d6aa",
+  "notes": "Audio and sticker binaries still originate from old music repo. This manifest pins their content, so the home repository is standalone to build (no sibling checkout required). Longer-term migrate music assets to central asset storage.",
+  "files": [
+    {
+      "relativePath": "stickers/avatar-dog.png",
+      "gitBlobSha": "080a20a2ae584e1dfdf09cad3e1dff73600935fd",
+      "size": 224501
+    },
+    {
+      "relativePath": "stickers/avatar-bear.png",
+      "gitBlobSha": "af1c78146b5eb88787c278f70028824d8b2f4c3c",
+      "size": 941684
+    },
+    {
+      "relativePath": "stickers/avatar-cat.png",
+      "gitBlobSha": "0558b083eebe1e2e2ff03531584ff7f35495f43e",
+      "size": 230452
+    },
+    {
+      "relativePath": "stickers/avatar-lion.png",
+      "gitBlobSha": "76d261c0d6ebb4a8556f568c0cb3cbb7034ef582",
+      "size": 265783
+    },
+    {
+      "relativePath": "stickers/home-feel.png",
+      "gitBlobSha": "0811559d0cf096ba7a02ee41e299f8189ba6d115",
+      "size": 291149
+    },
+    {
+      "relativePath": "stickers/home-create.png",
+      "gitBlobSha": "2cee1dc563496ddf89f85061bdd14185a04f4c89",
+      "size": 334045
+    },
+    {
+      "relativePath": "music/happy_bounce/v01/stems/dog.wav",
+      "gitBlobSha": "7c31b6f82dfc832d847f560a482edf4affcbfa34",
+      "size": 960044
+    },
+    {
+      "relativePath": "music/happy_bounce/v01/stems/bear.wav",
+      "gitBlobSha": "c4fb1a7343905ce997272fd37480308ec76eb9bb",
+      "size": 960044
+    },
+    {
+      "relativePath": "music/happy_bounce/v01/stems/cat.wav",
+      "gitBlobSha": "25a665d31baeba6fcbba84be00c861f4d5c56e8a",
+      "size": 960044
+    },
+    {
+      "relativePath": "music/happy_bounce/v01/stems/lion.wav",
+      "gitBlobSha": "4ce21a7374410b3b813b2ba699256498e16bfbaa",
+      "size": 960044
+    },
+    {
+      "relativePath": "music/calm_sway/v01/stems/dog.wav",
+      "gitBlobSha": "cb78d36ccb810ff2992bd0e227b0239e7a86e961",
+      "size": 1097188
+    },
+    {
+      "relativePath": "music/calm_sway/v01/stems/bear.wav",
+      "gitBlobSha": "19542dc9f5a7d2acb66c642b257314f9d5968681",
+      "size": 1097188
+    },
+    {
+      "relativePath": "music/calm_sway/v01/stems/cat.wav",
+      "gitBlobSha": "4c860af2650d660ab1b3a3b7077a1cd47869ac63",
+      "size": 1097188
+    },
+    {
+      "relativePath": "music/calm_sway/v01/stems/lion.wav",
+      "gitBlobSha": "f20cffcaf6bedb29c74ab5f71e7dd333d07ea6a6",
+      "size": 1097188
+    },
+    {
+      "relativePath": "music/brave_forward/v01/stems/dog.wav",
+      "gitBlobSha": "081f9c650e13a918131a08f3dca89816d045ced4",
+      "size": 853376
+    },
+    {
+      "relativePath": "music/brave_forward/v01/stems/bear.wav",
+      "gitBlobSha": "e77f4324ac70387ab1f857893391aabfc5d714ad",
+      "size": 853376
+    },
+    {
+      "relativePath": "music/brave_forward/v01/stems/cat.wav",
+      "gitBlobSha": "e90cd0e6c069cc6b622ce67bd33e24d51b45f836",
+      "size": 853376
+    },
+    {
+      "relativePath": "music/brave_forward/v01/stems/lion.wav",
+      "gitBlobSha": "e03e43439e5e4085c3cecabf82ae6a53f67e3176",
+      "size": 853376
+    },
+    {
+      "relativePath": "music/longing_steady/v01/stems/dog.wav",
+      "gitBlobSha": "b5cad6302736b158c9f3adae994bf8e5d1129a20",
+      "size": 1047316
+    },
+    {
+      "relativePath": "music/longing_steady/v01/stems/bear.wav",
+      "gitBlobSha": "638943c376f388bf1e673215f1f5c188b4bc9f32",
+      "size": 1047316
+    },
+    {
+      "relativePath": "music/longing_steady/v01/stems/cat.wav",
+      "gitBlobSha": "461b42f3b74ccf1b3f1cd8b532675a7a48c430a8",
+      "size": 1047316
+    },
+    {
+      "relativePath": "music/longing_steady/v01/stems/lion.wav",
+      "gitBlobSha": "ee40352cbbd9040a5c66edef0c40f31e4148b1c0",
+      "size": 1047316
+    }
+  ]
+}
