@@ -95,7 +95,7 @@ export class HomeAudio {
   const buff=Object.fromEntries(await Promise.all([...needed].map(async animal=>{
     const file=kit.manifest.stems?.[animal];
     if(!file)throw Error('缺少动物音轨 '+animal);
-    const url='/generated/music/'+kit.id+'/v01/'+file;
+    const url=import.meta.env.BASE_URL+'generated/music/'+kit.id+'/v01/'+file;
     return [animal,await this.buffer(url)];
   })));
   const base=ctx.currentTime+.17;

@@ -22,4 +22,4 @@ jobs:
       - name: Test family music domain
         run: node --test home/tests/*.test.mjs
       - name: Verify preview source assets
-        run: node home/scripts/stage-legacy-assets.mjs
+        run: AB_FORCE_REMOTE_ASSETS=1 node home/scripts/stage-legacy-assets.mjs

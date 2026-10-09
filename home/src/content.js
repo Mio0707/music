@@ -32,10 +32,11 @@ export const kits=[
  {id:'brave_forward',label:'勇敢·向前',mood:'brave',score:braveScore,manifest:braveManifest},
  {id:'longing_steady',label:'思念·平稳',mood:'longing',score:longingScore,manifest:longingManifest}
 ];
+const BASE=import.meta.env.BASE_URL;
 export const animals=[
- {id:'dog',label:'小狗',role:'鼓点',img:'/generated/stickers/avatar-dog.png',accent:'#FFD692'},
- {id:'bear',label:'小熊',role:'键盘与主旋律',img:'/generated/stickers/avatar-bear.png',accent:'#D9E7B8'},
- {id:'cat',label:'小猫',role:'贝斯',img:'/generated/stickers/avatar-cat.png',accent:'#E1D5FF'},
- {id:'lion',label:'狮子',role:'回应旋律',img:'/generated/stickers/avatar-lion.png',accent:'#FFD1C3'}
+ {id:'dog',label:'小狗',role:'鼓点',img:BASE+'generated/stickers/avatar-dog.png',accent:'#FFD692'},
+ {id:'bear',label:'小熊',role:'键盘与主旋律',img:BASE+'generated/stickers/avatar-bear.png',accent:'#D9E7B8'},
+ {id:'cat',label:'小猫',role:'贝斯',img:BASE+'generated/stickers/avatar-cat.png',accent:'#E1D5FF'},
+ {id:'lion',label:'狮子',role:'回应旋律',img:BASE+'generated/stickers/avatar-lion.png',accent:'#FFD1C3'}
 ];
 export const sections=['开场','第一段','第二段','结尾'];

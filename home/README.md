@@ -29,7 +29,7 @@
 
 ### 原始音乐与贴纸素材
 
-dev/build 前自动调用 scripts/stage-legacy-assets.mjs，从旧 music/prototype/assets 生成本地预览资源到 home/public/generated/（已 gitignore）。目前只包括四套音乐包的四条 WAV 分轨和首页、动物头像素材，不重复提交二进制文件。
+dev/build 前自动调用 scripts/stage-legacy-assets.mjs。源码资源来自旧 music 仓库固定 Git commit，具体 SHA-1 和字节长度在 assets/legacy-source.json 中锁定。脚本优先验证已缓存文件；若在原音乐仓库工作区，优先使用经过哈希验证的原版本地文件；在独立 animal-band-home 仓库或单独下载 ZIP 中则自动经 GitHub Raw 下载固定版本的 22 个文件，并验证 Git blob SHA。**不依赖原仓库存在于相邻目录。** 生成产物位于 public/generated/ 并被 gitignore 排除。
 
 ### 共享依赖
 
@@ -58,9 +58,13 @@ dev/build 前自动调用 scripts/stage-legacy-assets.mjs，从旧 music/prototy
 - tests/domain.test.mjs：纯算法与编曲规则单元测试
 - scripts/stage-legacy-assets.mjs：原有媒体资源自动分发
 
+## 独立仓库迁移
+
+可以把本目录 home/ 直接作为新仓库的根目录，不需再复制原 music 任何其它目录。源码和 22 个二进制资源的哈希在 assets/legacy-source.json 中锁定。音频正式发布前建议迁至统一素材存储，减少对旧公共仓库的构建期依赖。
+
 ## 测试
 
-无权限私有依赖时，GitHub Actions 只跑 JavaScript 语法、领域单元测试和原始资源存在性检查；不等于完整 Vite 浏览器运行验收。
+当前 GitHub Actions 运行 JavaScript 语法、领域单元测试和原始资源哈希校验，含经 GitHub Raw 独立下载素材；因两个 GitHub 共享仓库为 Private，CI 暂未配置跨仓库读取凭据，**不等于完整 Vite 浏览器运行验收**。
 
     npm test
     npm run build

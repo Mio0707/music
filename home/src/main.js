@@ -63,10 +63,10 @@ function home(){
  const cards=div('choice-grid',
   elt('button',{class:'choice-card learn-choice',on:()=>go('learn')},
    div('choice-copy',t('small','01 / LEARN','eyebrow'),t('h2','学音乐'),p('听节奏、跟着拍、认音符、唱旋律。'),t('span','进入学音乐 ↗','choice-cta')),
-   img('/generated/stickers/home-feel.png','动物音乐学习卡片')),
+   img(import.meta.env.BASE_URL+'generated/stickers/home-feel.png','动物音乐学习卡片')),
   elt('button',{class:'choice-card band-choice',on:()=>go('band')},
    div('choice-copy',t('small','02 / CREATE','eyebrow'),t('h2','玩乐队'),p('邀请四只动物，亲手编排属于自己的音乐。'),t('span','进入玩乐队 ↗','choice-cta')),
-   img('/generated/stickers/home-create.png','动物乐队创作卡片')));
+   img(import.meta.env.BASE_URL+'generated/stickers/home-create.png','动物乐队创作卡片')));
  return div('screen',hero,div('section-lead',t('h2','今天想怎么玩？'),p('两个入口都能直接开始，不需要先完成课程才能创作。')),cards,
   div('next-banner',div('',t('strong','有保存过的作品吗？'),p('从这台设备上继续上次的创作。')),linked('查看我的作品 →','works','button outline')));
 }
